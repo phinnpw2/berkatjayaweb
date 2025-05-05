@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "874318126804",
+    "project_id": "berkatjayaweb",
+    "storage_bucket": "berkatjayaweb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:874318126804:android:41d44949b7280f6c902541",
+        "android_client_info": {
+          "package_name": "com.example.berkatjaya_web"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAj49CwAA2Fd_9O375kccCyJKrl7zeVP9Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
