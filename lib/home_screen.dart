@@ -18,6 +18,10 @@ class MyApp extends StatelessWidget {
 class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Mendapatkan ukuran layar
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,  // Transparan agar background tetap terlihat
@@ -54,61 +58,54 @@ class HomeScreen extends StatelessWidget {
               fit: BoxFit.cover,  // Mengatur gambar agar menutupi seluruh layar
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Today is a good day to learn something new!',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-                SizedBox(height: 20),
-                Text(
-                  'Categories',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                SizedBox(height: 10),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 1.5, // Mengurangi ukuran tombol
+          SingleChildScrollView(  // Membuat konten bisa di-scroll
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Selamat Datang Sahabatku',
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      itemCount: 4,
-                      itemBuilder: (context, index) {
-                        return CategoryCard(
-                          title: categories[index]['title'],
-                          icon: categories[index]['icon'],
-                        );
-                      },
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 20),
+                  Text(
+                    'Categories',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  SizedBox(height: 10),
+                  // Menyesuaikan jumlah kolom berdasarkan lebar layar
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),  // Menghindari scroll ganda
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: (screenWidth > 600) ? 2 : 2,  // 3 kolom untuk layar besar, 2 kolom untuk layar kecil
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: screenWidth > 600 ? 1.3 : 1, // Menyesuaikan ukuran untuk layar kecil
+                    ),
+                    itemCount: 4,
+                    itemBuilder: (context, index) {
+                      return CategoryCard(
+                        title: categories[index]['title'],
+                        imagePath: categories[index]['imagePath'],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favorite',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
           ),
         ],
       ),
@@ -118,21 +115,21 @@ class HomeScreen extends StatelessWidget {
 
 class CategoryCard extends StatelessWidget {
   final String title;
-  final IconData icon;
+  final String imagePath;
 
   const CategoryCard({
     Key? key,
     required this.title,
-    required this.icon,
+    required this.imagePath,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(20),  // Membuat sudut lebih melengkung
       ),
-      elevation: 4,
+      elevation: 8,  // Memberikan bayangan lebih dalam
       child: InkWell(
         onTap: () {
           // Navigasi ke halaman terkait kategori
@@ -146,17 +143,25 @@ class CategoryCard extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(20),  // Membuat sudut lebih melengkung
             gradient: LinearGradient(
               colors: [Colors.blueAccent, Colors.purpleAccent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+            boxShadow: [
+              BoxShadow(  // Memberikan efek bayangan di luar tombol
+                color: Colors.black.withOpacity(0.2),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: Colors.white),
+              Image.asset(imagePath, height: 40, width: 40), // Menampilkan gambar sesuai path
               SizedBox(height: 10),
               Text(
                 title,
@@ -175,8 +180,8 @@ class CategoryCard extends StatelessWidget {
 }
 
 final List<Map<String, dynamic>> categories = [
-  {'title': 'Kasir', 'icon': Icons.image},
-  {'title': 'Stok Produk', 'icon': Icons.code},
-  {'title': 'Laporan', 'icon': Icons.attach_money},
-  {'title': 'Pengaturan', 'icon': Icons.design_services},
+  {'title': 'Kasir', 'imagePath': 'assets/kasirlogo.png'},  // Ganti dengan path gambar Anda
+  {'title': 'Stok Produk', 'imagePath': 'assets/stoklogo.png'},  // Ganti dengan path gambar Anda
+  {'title': 'Laporan', 'imagePath': 'assets/laporanlogo.png'},  // Ganti dengan path gambar Anda
+  {'title': 'Pengaturan', 'imagePath': 'assets/pengaturanlogo.png'},  // Ganti dengan path gambar Anda
 ];
