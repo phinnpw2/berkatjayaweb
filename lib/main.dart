@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'produk_page.dart'; // Make sure this file and class exist
-import 'login_screen.dart'; // Import the login_screen.dart file
+import 'produk_page.dart';  // ProdukPage yang akan dituju setelah login
+import 'home_screen.dart';  // HomeScreen baru yang akan ditampilkan pertama kali
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,12 +18,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aplikasi Produk',
+      title: 'Produk App',
       theme: ThemeData(
-        primarySwatch: Colors.teal,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        primarySwatch: Colors.blue,
       ),
-      home: LoginPage(), // Set the login page as the starting screen
+      home:  HomeScreen(), // Menampilkan HomeScreen pertama kali
     );
   }
 }
+
+ 

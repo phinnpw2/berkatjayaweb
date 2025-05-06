@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 void main() {
   runApp(MyApp());
 }
@@ -25,11 +24,11 @@ class _LoginPageState extends State<LoginPage> {
 
   void _login() {
     // Here you can implement your actual login logic (e.g., check if credentials are correct)
-    if (_emailController.text == "user@example.com" && _passwordController.text == "password123") {
+    if (_emailController.text == "123" && _passwordController.text == "123") {
       // Navigate to the HomePage after successful login
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => HomeScreen()), // Ganti HomePage dengan HomeScreen
       );
     } else {
       // Show an error message if the login fails
@@ -124,8 +123,7 @@ class _LoginPageState extends State<LoginPage> {
                 style: ButtonStyle(
                   backgroundColor:
                       MaterialStateProperty.all<Color>(Colors.deepPurpleAccent),
-                  padding: MaterialStateProperty.all<EdgeInsets>(
-                      EdgeInsets.symmetric(vertical: 15)),
+                  padding: MaterialStateProperty.all<EdgeInsets>(EdgeInsets.symmetric(vertical: 15)),
                   shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -154,17 +152,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Home Page"),
+        title: const Text('Home Page'),
         backgroundColor: Colors.deepPurpleAccent,
       ),
       body: Center(
-        child: Text(
-          "Welcome to the Home Page!",
+        child: const Text(
+          'Welcome to the Home Page!',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
       ),
