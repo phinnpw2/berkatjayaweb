@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'produk_page.dart'; // pastikan file dan class ini sudah ada
+import 'produk_page.dart'; // Make sure this file and class exist
+import 'login_screen.dart'; // Import the login_screen.dart file
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.teal,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const ProdukPage(), // halaman utama kita
+      home: LoginPage(), // Set the login page as the starting screen
     );
   }
 }
