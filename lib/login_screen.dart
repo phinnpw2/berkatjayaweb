@@ -1,3 +1,4 @@
+import 'package:berkatjaya_web/home_screen.dart';
 import 'package:flutter/material.dart';
 void main() {
   runApp(MyApp());
@@ -28,8 +29,8 @@ class _LoginPageState extends State<LoginPage> {
       // Navigate to the HomePage after successful login
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()), // Ganti HomePage dengan HomeScreen
-      );
+        MaterialPageRoute(builder: (context) => HomeScreen(), // Ganti HomePage dengan HomeScreen
+      ));
     } else {
       // Show an error message if the login fails
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -146,24 +147,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Page'),
-        backgroundColor: Colors.deepPurpleAccent,
-      ),
-      body: Center(
-        child: const Text(
-          'Welcome to the Home Page!',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
       ),
     );
