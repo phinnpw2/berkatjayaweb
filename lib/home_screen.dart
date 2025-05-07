@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'produk_page.dart';  // Mengimpor halaman produk_page
+import 'kasir_screen.dart'; // Mengimpor halaman kasir_screen
 
 void main() {
   runApp(MyApp());
@@ -133,10 +134,15 @@ class CategoryCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           // Navigasi ke halaman terkait kategori
-          if (title == 'Stok Produk') {
+          if (title == 'Kasir') {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ProdukPage()),
+              MaterialPageRoute(builder: (context) => KasirScreen()),  // Navigasi ke KasirScreen
+            );
+          } else if (title == 'Stok Produk') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProdukPage()),  // Navigasi ke ProdukPage
             );
           }
         },
