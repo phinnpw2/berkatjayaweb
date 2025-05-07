@@ -1,5 +1,6 @@
-import 'package:berkatjaya_web/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'home_screen.dart';  // Pastikan HomeScreen sudah diimpor dengan benar
+
 void main() {
   runApp(MyApp());
 }
@@ -24,15 +25,15 @@ class _LoginPageState extends State<LoginPage> {
   bool _rememberMe = false;
 
   void _login() {
-    // Here you can implement your actual login logic (e.g., check if credentials are correct)
+    // Logika login, misalnya dengan cek kredensial
     if (_emailController.text == "123" && _passwordController.text == "123") {
-      // Navigate to the HomePage after successful login
+      // Arahkan ke HomeScreen setelah login berhasil
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen(), // Ganti HomePage dengan HomeScreen
-      ));
+        MaterialPageRoute(builder: (context) => HomeScreen()), // Pastikan HomeScreen sudah benar
+      );
     } else {
-      // Show an error message if the login fails
+      // Tampilkan pesan kesalahan jika login gagal
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text("Invalid login credentials"),
         backgroundColor: Colors.red,
@@ -125,11 +126,9 @@ class _LoginPageState extends State<LoginPage> {
                   backgroundColor:
                       MaterialStateProperty.all<Color>(Colors.deepPurpleAccent),
                   padding: MaterialStateProperty.all<EdgeInsets>(EdgeInsets.symmetric(vertical: 15)),
-                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  )),
                 ),
               ),
               SizedBox(height: 15),
