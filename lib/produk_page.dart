@@ -1,3 +1,4 @@
+import 'dart:convert'; // tambahkan ini untuk base64Decode
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -200,6 +201,7 @@ class _ProdukPageState extends State<ProdukPage> {
                             final data = doc.data() as Map<String, dynamic>;
                             final nama = data['nama'] ?? '';
                             final stok = data['stok'] ?? 0;
+                            final base64Image = data['gambar'] ?? '';
 
                             return Container(
                               padding: const EdgeInsets.all(8),
@@ -211,7 +213,21 @@ class _ProdukPageState extends State<ProdukPage> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('$nama\nStok: $stok', textAlign: TextAlign.center,
+                                  if (base64Image.isNotEmpty)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.memory(
+                                        base64Decode(base64Image),
+                                        width: 70,
+                                        height: 70,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  else
+                                    const Icon(Icons.image_not_supported, size: 70, color: Colors.grey),
+                                  Text(
+                                    '$nama\nStok: $stok',
+                                    textAlign: TextAlign.center,
                                     style: const TextStyle(fontWeight: FontWeight.w600),
                                   ),
                                   Row(
