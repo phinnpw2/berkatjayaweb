@@ -1,6 +1,10 @@
-import 'dart:convert'; // tambahkan ini untuk base64Decode
+// Tambahan dependencies (di pubspec.yaml):
+// image_picker: ^1.0.0
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProdukPage extends StatefulWidget {
   const ProdukPage({super.key});
@@ -13,6 +17,18 @@ class _ProdukPageState extends State<ProdukPage> {
   String _kategoriAktif = 'makanan';
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _stokController = TextEditingController();
+  String? _base64Image;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes(); // support for Web
+      setState(() {
+        _base64Image = base64Encode(bytes);
+      });
+    }
+  }
 
   Future<void> _tambahProduk() async {
     final nama = _namaController.text;
@@ -23,11 +39,15 @@ class _ProdukPageState extends State<ProdukPage> {
       'nama': nama,
       'stok': stok,
       'kategori': _kategoriAktif,
+      'gambar': _base64Image ?? '',
       'timestamp': FieldValue.serverTimestamp(),
     });
 
     _namaController.clear();
     _stokController.clear();
+    setState(() {
+      _base64Image = null;
+    });
   }
 
   Future<void> _editProduk(String id, String nama, int stok) async {
@@ -81,39 +101,56 @@ class _ProdukPageState extends State<ProdukPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Tambah Produk'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _namaController,
-                decoration: const InputDecoration(labelText: 'Nama Produk'),
-              ),
-              TextField(
-                controller: _stokController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Stok'),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Text('Kategori: '),
-                  DropdownButton<String>(
-                    value: _kategoriAktif,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _kategoriAktif = newValue!;
-                      });
-                    },
-                    items: <String>['makanan', 'minuman'].map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value.toUpperCase()),
-                      );
-                    }).toList(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _namaController,
+                  decoration: const InputDecoration(labelText: 'Nama Produk'),
+                ),
+                TextField(
+                  controller: _stokController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Stok'),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Text('Kategori: '),
+                    DropdownButton<String>(
+                      value: _kategoriAktif,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _kategoriAktif = newValue!;
+                        });
+                      },
+                      items: <String>['makanan', 'minuman'].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value.toUpperCase()),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.image),
+                  label: const Text('Pilih Gambar'),
+                ),
+                if (_base64Image != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Image.memory(
+                      base64Decode(_base64Image!),
+                      width: 80,
+                      height: 80,
+                    ),
                   ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
@@ -127,6 +164,57 @@ class _ProdukPageState extends State<ProdukPage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildRoundedButton(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 2),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildTabButton(String label, {required bool isActive, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.black, width: 2),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.black : Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArrowLabel(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: BeveledRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: Colors.black, width: 2),
+        ),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      ),
     );
   }
 
@@ -274,55 +362,4 @@ class _ProdukPageState extends State<ProdukPage> {
       ),
     );
   }
-
-  Widget _buildRoundedButton(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black, width: 2),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildTabButton(String label, {required bool isActive, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.black, width: 2),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isActive ? Colors.black : Colors.grey,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildArrowLabel(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: BeveledRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-          side: const BorderSide(color: Colors.black, width: 2),
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-    );
-  }
-}
+} // akhir file
