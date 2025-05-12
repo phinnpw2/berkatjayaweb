@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -207,6 +209,7 @@ class _KasirScreenState extends State<KasirScreen> {
                           final name = data['nama'] ?? '';
                           final price = data['harga'] ?? 0.0;
                           final stock = data['stok'] ?? 0;
+                          final base64Image = data['gambar'] ?? '';  // Mendapatkan gambar base64
 
                           return GestureDetector(
                             onTap: stock > 0 ? () => addToOrder(id, name, price) : null,
@@ -218,7 +221,17 @@ class _KasirScreenState extends State<KasirScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.fastfood, size: 50),
+                                  base64Image.isNotEmpty
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Image.memory(
+                                            base64Decode(base64Image),
+                                            width: 50,
+                                            height: 50,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : const Icon(Icons.fastfood, size: 50),
                                   Text(name, style: TextStyle(fontSize: 16)),
                                   Text('Stok: $stock', style: TextStyle(fontSize: 16)),
                                   Row(
@@ -260,17 +273,29 @@ class _KasirScreenState extends State<KasirScreen> {
                 ),
                 // Order items grid
                 Expanded(
-                  child: ListView(
-                    children: orderMenu.map((item) {
-                      return ListTile(
-                        title: Text('${item['name']} (x${item['quantity']})'),
-                        subtitle: Text('\$${item['price']}'),
-                        trailing: IconButton(
-                          icon: Icon(Icons.delete),
-                          onPressed: () => _removeProduct(item['id']),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 1,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 4,
+                    ),
+                    itemCount: orderMenu.length,
+                    itemBuilder: (context, index) {
+                      final item = orderMenu[index];
+                      return Card(
+                        elevation: 5,
+                        child: ListTile(
+                          title: Text('${item['name']} (x${item['quantity']})'),
+                          subtitle: Text('\$${item['price']}'),
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete),
+                            onPressed: () => _removeProduct(item['id']),
+                          ),
                         ),
                       );
-                    }).toList(),
+                    },
                   ),
                 ),
               ],
