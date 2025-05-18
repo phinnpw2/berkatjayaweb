@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -15,9 +14,76 @@ class KasirScreen extends StatefulWidget {
 }
 
 class _KasirScreenState extends State<KasirScreen> {
+  String selectedCategory = "makanan";  // Default kategori makanan
   final List<Map<String, dynamic>> orderMenu = [];
-  String selectedCategory = "All";  // Default category
 
+  // Fungsi untuk menambah produk ke dalam order menu
+  void addToOrder(String id, String name, double price, int stock) async {
+    if (stock > 0) {
+      setState(() {
+        bool itemExists = false;
+        for (var item in orderMenu) {
+          if (item['id'] == id) {
+            item['quantity']++;
+            itemExists = true;
+            break;
+          }
+        }
+        if (!itemExists) {
+          orderMenu.add({'id': id, 'name': name, 'price': price, 'quantity': 1});
+        }
+      });
+
+      // Update stok di Firestore
+      final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+      final docSnapshot = await docRef.get();
+      if (docSnapshot.exists) {
+        final currentStock = docSnapshot.data()?['stok'] ?? 0;
+        if (currentStock > 0) {
+          docRef.update({'stok': currentStock - 1});
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
+    }
+  }
+
+  // Fungsi untuk mengurangi produk dalam order menu
+  void removeOneItem(String id, double price) async {
+    setState(() {
+      for (var item in orderMenu) {
+        if (item['id'] == id && item['quantity'] > 1) {
+          item['quantity']--;
+          break;
+        }
+      }
+    });
+
+    // Update stok di Firestore
+    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+    final docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+      docRef.update({'stok': currentStock + 1});
+    }
+  }
+
+  // Fungsi untuk menghapus produk dari order menu
+  void removeItemFromOrder(String id, int quantity) async {
+    setState(() {
+      orderMenu.removeWhere((item) => item['id'] == id);
+    });
+
+    // Update stok di Firestore
+    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+    final docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+      docRef.update({'stok': currentStock + quantity});
+    }
+  }
+
+  // Menghitung total harga dari produk yang ada di order menu
   double get totalCharge {
     double total = 0;
     for (var item in orderMenu) {
@@ -26,121 +92,12 @@ class _KasirScreenState extends State<KasirScreen> {
     return total;
   }
 
-  // Fungsi untuk menambah produk ke dalam pesanan
-  void addToOrder(String id, String name, double price) async {
-    setState(() {
-      bool itemExists = false;
-      for (var item in orderMenu) {
-        if (item['id'] == id) {
-          item['quantity']++;
-          itemExists = true;
-          break;
-        }
-      }
-      if (!itemExists) {
-        orderMenu.add({'id': id, 'name': name, 'price': price, 'quantity': 1});
-      }
-    });
-
-    // Update stok produk di Firestore
-    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-    final docSnapshot = await docRef.get();
-    if (docSnapshot.exists) {
-      final currentStock = docSnapshot.data()?['stok'] ?? 0;
-      if (currentStock > 0) {
-        docRef.update({'stok': currentStock - 1});
-      }
-    }
-  }
-
-  // Fungsi untuk menambah atau mengurangi jumlah produk dalam pesanan
-  Future<void> _updateProductQuantity(String id, bool increase) async {
-    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-    final docSnapshot = await docRef.get();
-
-    if (docSnapshot.exists) {
-      final currentStock = docSnapshot.data()?['stok'] ?? 0;
-      final orderItem = orderMenu.firstWhere((item) => item['id'] == id);
-
-      setState(() {
-        if (increase) {
-          if (currentStock > 0) {
-            orderItem['quantity']++;
-            docRef.update({'stok': currentStock - 1}); // Update stok Firestore
-          }
-        } else {
-          if (orderItem['quantity'] > 1) {
-            orderItem['quantity']--;
-            docRef.update({'stok': currentStock + 1}); // Kembalikan stok
-          }
-        }
-      });
-    }
-  }
-
-  // Fungsi untuk menghapus produk dari order
-  Future<void> _removeProduct(String id) async {
-    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-    final docSnapshot = await docRef.get();
-
-    if (docSnapshot.exists) {
-      final currentStock = docSnapshot.data()?['stok'] ?? 0;
-      final orderItem = orderMenu.firstWhere((item) => item['id'] == id);
-
-      setState(() {
-        orderMenu.removeWhere((item) => item['id'] == id); // Remove item from order
-        docRef.update({'stok': currentStock + orderItem['quantity']}); // Add back to stock
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Kasir App'),
         backgroundColor: Colors.deepPurpleAccent,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Order Summary'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: orderMenu.map((item) {
-                        return ListTile(
-                          title: Text('${item['name']} (x${item['quantity']})'),
-                          subtitle: Text('\$${item['price']}'),
-                          trailing: IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () => _removeProduct(item['id']),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    actions: [
-                      Text('Subtotal: \$${totalCharge.toStringAsFixed(2)}'),
-                      SizedBox(height: 10),
-                      ElevatedButton(
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all<Color>(Colors.deepPurpleAccent),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text('Charge \$${totalCharge.toStringAsFixed(2)}'),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
-        ],
       ),
       body: Row(
         children: [
@@ -149,38 +106,42 @@ class _KasirScreenState extends State<KasirScreen> {
             flex: 2,
             child: Column(
               children: [
-                // Category buttons
+                // Kategori Buttons (Makanan dan Minuman)
                 Container(
                   padding: EdgeInsets.all(10),
                   color: Colors.deepPurpleAccent,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.start, // Tombol kiri
                     children: [
-                      CategoryButton(label: 'All', isSelected: selectedCategory == 'All', onPressed: () {
-                        setState(() {
-                          selectedCategory = 'All';
-                        });
-                      }),
-                      CategoryButton(label: 'Makanan', isSelected: selectedCategory == 'Makanan', onPressed: () {
-                        setState(() {
-                          selectedCategory = 'Makanan';
-                        });
-                      }),
-                      CategoryButton(label: 'Minuman', isSelected: selectedCategory == 'Minuman', onPressed: () {
-                        setState(() {
-                          selectedCategory = 'Minuman';
-                        });
-                      }),
+                      CategoryButton(
+                        label: 'Makanan',
+                        isSelected: selectedCategory == 'makanan',
+                        onPressed: () {
+                          setState(() {
+                            selectedCategory = 'makanan';
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      CategoryButton(
+                        label: 'Minuman',
+                        isSelected: selectedCategory == 'minuman',
+                        onPressed: () {
+                          setState(() {
+                            selectedCategory = 'minuman';
+                          });
+                        },
+                      ),
                     ],
                   ),
                 ),
 
-                // Grid Produk berdasarkan kategori
+                // Grid Produk berdasarkan kategori yang dipilih
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('produk')
-                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
+                        .where('kategori', isEqualTo: selectedCategory)
                         .orderBy('timestamp', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
@@ -207,48 +168,38 @@ class _KasirScreenState extends State<KasirScreen> {
                           final data = doc.data() as Map<String, dynamic>;
                           final id = doc.id;
                           final name = data['nama'] ?? '';
-                          final price = data['harga'] ?? 0.0;
                           final stock = data['stok'] ?? 0;
-                          final base64Image = data['gambar'] ?? '';  // Mendapatkan gambar base64
+                          final price = data['harga'] ?? 0.0;
+                          final base64Image = data['gambar'] ?? '';
 
-                          return GestureDetector(
-                            onTap: stock > 0 ? () => addToOrder(id, name, price) : null,
-                            child: Card(
-                              elevation: 5,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  base64Image.isNotEmpty
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(10),
-                                          child: Image.memory(
-                                            base64Decode(base64Image),
-                                            width: 50,
-                                            height: 50,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                      : const Icon(Icons.fastfood, size: 50),
-                                  Text(name, style: TextStyle(fontSize: 16)),
-                                  Text('Stok: $stock', style: TextStyle(fontSize: 16)),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.add),
-                                        onPressed: stock > 0 ? () => _updateProductQuantity(id, true) : null,
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.remove),
-                                        onPressed: () => _updateProductQuantity(id, false),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                          return Card(
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                base64Image.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.memory(
+                                          base64Decode(base64Image),
+                                          width: 50,
+                                          height: 50,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : const Icon(Icons.fastfood, size: 50),
+                                Text(name, style: TextStyle(fontSize: 16)),
+                                Text('Stok: $stock', style: TextStyle(fontSize: 16)),
+                                IconButton(
+                                  icon: Icon(Icons.add, size: 30),
+                                  onPressed: () {
+                                    addToOrder(id, name, price, stock);
+                                  },
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -271,16 +222,10 @@ class _KasirScreenState extends State<KasirScreen> {
                   padding: const EdgeInsets.all(8.0),
                   child: Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
+
                 // Order items grid
                 Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 1,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 4,
-                    ),
+                  child: ListView.builder(
                     itemCount: orderMenu.length,
                     itemBuilder: (context, index) {
                       final item = orderMenu[index];
@@ -288,14 +233,41 @@ class _KasirScreenState extends State<KasirScreen> {
                         elevation: 5,
                         child: ListTile(
                           title: Text('${item['name']} (x${item['quantity']})'),
-                          subtitle: Text('\$${item['price']}'),
-                          trailing: IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () => _removeProduct(item['id']),
+                          subtitle: Text('Rp ${item['price']}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Button - untuk mengurangi jumlah produk
+                              IconButton(
+                                icon: Icon(Icons.remove, size: 20),
+                                onPressed: () {
+                                  if (item['quantity'] > 1) {
+                                    removeOneItem(item['id'], item['price']);
+                                  }
+                                },
+                              ),
+                              
+                              // Button Hapus untuk menghapus produk
+                              IconButton(
+                                icon: Icon(Icons.delete, size: 20),
+                                onPressed: () {
+                                  removeItemFromOrder(item['id'], item['quantity']);
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );
                     },
+                  ),
+                ),
+
+                // Total charge di bagian bawah order menu
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    'Total: Rp ${totalCharge.toStringAsFixed(2)}',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],

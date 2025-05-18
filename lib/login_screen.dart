@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';  // Pastikan HomeScreen sudah diimpor dengan benar
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'home_screen.dart'; // pastikan sudah ada userDocId juga
 
 void main() {
   runApp(MyApp());
@@ -9,6 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: LoginPage(),
     );
   }
@@ -20,22 +22,41 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
 
-  void _login() {
-    // Logika login, misalnya dengan cek kredensial
-    if (_emailController.text == "123" && _passwordController.text == "123") {
-      // Arahkan ke HomeScreen setelah login berhasil
+  void _login() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    final query = await FirebaseFirestore.instance
+        .collection('user')
+        .where('username', isEqualTo: username)
+        .where('password', isEqualTo: password)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs.first;
+      final userData = doc.data();
+      final userDocId = doc.id;
+
+      final role = userData['role'];
+      final namaUser = userData['username'];
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()), // Pastikan HomeScreen sudah benar
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            username: namaUser,
+            role: role,
+            userDocId: userDocId,
+          ),
+        ),
       );
     } else {
-      // Tampilkan pesan kesalahan jika login gagal
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Invalid login credentials"),
+        content: Text("Username atau password salah"),
         backgroundColor: Colors.red,
       ));
     }
@@ -46,24 +67,22 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Positioned.fill(
             child: Image.asset(
-              'assets/backgroundlogin.jpg', // Update this path to your image
-              fit: BoxFit.cover,  // Ensures the image covers the screen
+              'assets/backgroundlogin.jpg',
+              fit: BoxFit.cover,
             ),
           ),
-          // Transparent login container
           Center(
             child: Container(
               width: 320,
               padding: EdgeInsets.all(25),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),  // Increased transparency
+                color: Colors.white.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black26,  // Softer shadow to blend well
+                    color: Colors.black26,
                     offset: Offset(0, 10),
                     blurRadius: 15,
                   ),
@@ -92,11 +111,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   SizedBox(height: 30),
                   TextField(
-                    controller: _emailController,
+                    controller: _usernameController,
                     decoration: InputDecoration(
-                      labelText: 'ID',
+                      labelText: 'Username',
                       labelStyle: TextStyle(color: Colors.deepPurpleAccent),
-                      prefixIcon: Icon(Icons.email, color: Colors.deepPurpleAccent),
+                      prefixIcon: Icon(Icons.person, color: Colors.deepPurpleAccent),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -133,19 +152,18 @@ class _LoginPageState extends State<LoginPage> {
                   ElevatedButton(
                     onPressed: _login,
                     child: Text('Login'),
-                    style: ButtonStyle(
-                      backgroundColor:
-                          MaterialStateProperty.all<Color>(Colors.deepPurpleAccent),
-                      padding: MaterialStateProperty.all<EdgeInsets>(EdgeInsets.symmetric(vertical: 15)),
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(RoundedRectangleBorder(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurpleAccent,
+                      padding: EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
-                      )),
+                      ),
                     ),
                   ),
                   SizedBox(height: 15),
                   GestureDetector(
                     onTap: () {
-                      // Handle forgot password logic here
+                      // aksi lupa password
                     },
                     child: Text(
                       'Forgot Password?',

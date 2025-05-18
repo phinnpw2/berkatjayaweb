@@ -1,7 +1,4 @@
-// Tambahan dependencies (di pubspec.yaml):
-// image_picker: ^1.0.0
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,13 +14,15 @@ class _ProdukPageState extends State<ProdukPage> {
   String _kategoriAktif = 'makanan';
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _stokController = TextEditingController();
+  final TextEditingController _hargaController = TextEditingController();
   String? _base64Image;
+  bool _isLoading = false;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes(); // support for Web
+      final bytes = await pickedFile.readAsBytes();
       setState(() {
         _base64Image = base64Encode(bytes);
       });
@@ -33,11 +32,16 @@ class _ProdukPageState extends State<ProdukPage> {
   Future<void> _tambahProduk() async {
     final nama = _namaController.text;
     final stok = int.tryParse(_stokController.text) ?? 0;
+    final harga = int.tryParse(_hargaController.text) ?? 0;
+
     if (nama.isEmpty) return;
+
+    setState(() => _isLoading = true);
 
     await FirebaseFirestore.instance.collection('produk').add({
       'nama': nama,
       'stok': stok,
+      'harga': harga,
       'kategori': _kategoriAktif,
       'gambar': _base64Image ?? '',
       'timestamp': FieldValue.serverTimestamp(),
@@ -45,8 +49,10 @@ class _ProdukPageState extends State<ProdukPage> {
 
     _namaController.clear();
     _stokController.clear();
+    _hargaController.clear();
     setState(() {
       _base64Image = null;
+      _isLoading = false;
     });
   }
 
@@ -73,16 +79,27 @@ class _ProdukPageState extends State<ProdukPage> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _namaController.clear();
+              _stokController.clear();
+            },
+            child: const Text('Batal'),
+          ),
           TextButton(
             onPressed: () async {
               final newNama = _namaController.text;
               final newStok = int.tryParse(_stokController.text) ?? 0;
+
               await FirebaseFirestore.instance.collection('produk').doc(id).update({
                 'nama': newNama,
                 'stok': newStok,
               });
+
               Navigator.pop(context);
+              _namaController.clear();
+              _stokController.clear();
             },
             child: const Text('Simpan'),
           ),
@@ -113,6 +130,11 @@ class _ProdukPageState extends State<ProdukPage> {
                   controller: _stokController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Stok'),
+                ),
+                TextField(
+                  controller: _hargaController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Harga'),
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -154,13 +176,18 @@ class _ProdukPageState extends State<ProdukPage> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-            TextButton(
-              onPressed: () {
-                _tambahProduk();
-                Navigator.pop(context);
-              },
-              child: const Text('Simpan'),
-            ),
+            _isLoading
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: CircularProgressIndicator(),
+                  )
+                : TextButton(
+                    onPressed: () async {
+                      await _tambahProduk();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Simpan'),
+                  ),
           ],
         );
       },
@@ -219,6 +246,14 @@ class _ProdukPageState extends State<ProdukPage> {
   }
 
   @override
+  void dispose() {
+    _namaController.dispose();
+    _stokController.dispose();
+    _hargaController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
@@ -257,7 +292,6 @@ class _ProdukPageState extends State<ProdukPage> {
                   const SizedBox(height: 8),
                   _buildArrowLabel('Daftar Produk'),
                   const SizedBox(height: 16),
-
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
@@ -289,6 +323,7 @@ class _ProdukPageState extends State<ProdukPage> {
                             final data = doc.data() as Map<String, dynamic>;
                             final nama = data['nama'] ?? '';
                             final stok = data['stok'] ?? 0;
+                            final harga = data['harga'] ?? 0;
                             final base64Image = data['gambar'] ?? '';
 
                             return Container(
@@ -314,7 +349,7 @@ class _ProdukPageState extends State<ProdukPage> {
                                   else
                                     const Icon(Icons.image_not_supported, size: 70, color: Colors.grey),
                                   Text(
-                                    '$nama\nStok: $stok',
+                                    '$nama\nStok: $stok\nHarga: Rp $harga',
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(fontWeight: FontWeight.w600),
                                   ),
@@ -327,7 +362,32 @@ class _ProdukPageState extends State<ProdukPage> {
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete, color: Colors.black),
-                                        onPressed: () => _hapusProduk(doc.id),
+                                        onPressed: () {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Konfirmasi Hapus'),
+      content: Text('Apakah Anda yakin ingin menghapus "$nama"?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), // batal
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context); // tutup dialog dulu
+            await _hapusProduk(doc.id); // baru hapus
+          },
+          child: const Text(
+            'Hapus',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    ),
+  );
+},
+
                                       ),
                                     ],
                                   )
@@ -362,4 +422,4 @@ class _ProdukPageState extends State<ProdukPage> {
       ),
     );
   }
-} // akhir file
+}
