@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pembayaran_screen.dart';  // Pastikan untuk mengimpor PembayaranScreen di sini
 
 void main() {
   runApp(MaterialApp(
@@ -90,85 +91,6 @@ class _KasirScreenState extends State<KasirScreen> {
       total += item['price'] * item['quantity'];
     }
     return total;
-  }
-
-  // Fungsi untuk mengupdate jumlah produk di order menu dan stok di Firestore
-  void updateQuantity(String id, int newQuantity) async {
-    final item = orderMenu.firstWhere((item) => item['id'] == id);
-
-    // Update jumlah produk
-    setState(() {
-      item['quantity'] = newQuantity;
-    });
-
-    // Update stok di Firestore
-    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-    final docSnapshot = await docRef.get();
-    final currentStock = docSnapshot.data()?['stok'] ?? 0;
-    docRef.update({'stok': currentStock - (newQuantity - item['quantity'])});
-  }
-
-  // Fungsi untuk menampilkan dialog edit jumlah produk
-  Future<void> _showEditDialog(int currentQuantity, String productId, int stock) async {
-    int newQuantity = currentQuantity;  // Inisialisasi dengan nilai default
-    TextEditingController controller = TextEditingController(text: currentQuantity.toString());
-
-    // Menampilkan dialog untuk mengedit jumlah
-    await showDialog<int>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Edit Jumlah'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                keyboardType: TextInputType.number,
-                controller: controller,
-                onChanged: (value) {
-                  newQuantity = int.tryParse(value) ?? currentQuantity; // Mengambil angka yang dimasukkan
-                },
-                decoration: InputDecoration(hintText: 'Masukkan jumlah'),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () async {
-                // Mengupdate jumlah produk yang baru dan stok produk
-                Navigator.pop(context, newQuantity);  // Kembali dengan jumlah baru
-              },
-              child: Text('Simpan'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context, null);  // Membatalkan perubahan
-              },
-              child: Text('Batal'),
-            ),
-          ],
-        );
-      },
-    ).then((value) {
-      if (value != null && value > 0) {
-        // Update jumlah produk setelah input
-        setState(() {
-          final item = orderMenu.firstWhere((item) => item['id'] == productId);
-          final previousQuantity = item['quantity']; // Mendapatkan jumlah produk sebelumnya
-          item['quantity'] = value;
-
-          // Update stok produk di Firestore
-          final docRef = FirebaseFirestore.instance.collection('produk').doc(productId);
-          docRef.get().then((docSnapshot) {
-            if (docSnapshot.exists) {
-              final currentStock = docSnapshot.data()?['stok'] ?? 0;
-              // Kembalikan stok produk ke jumlah sebelumnya dan sesuaikan dengan perubahan jumlah
-              docRef.update({'stok': currentStock - (value - previousQuantity)});
-            }
-          });
-        });
-      }
-    });
   }
 
   @override
@@ -322,7 +244,6 @@ class _KasirScreenState extends State<KasirScreen> {
                                 icon: Icon(Icons.edit, size: 20),
                                 onPressed: () async {
                                   // Fungsi untuk mengedit jumlah produk
-                                  _showEditDialog(item['quantity'], item['id'], item['quantity']);
                                 },
                               ),
 
@@ -354,9 +275,35 @@ class _KasirScreenState extends State<KasirScreen> {
                 // Total charge di bagian bawah order menu
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    'Total: Rp ${totalCharge.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Total: Rp ${totalCharge.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      // Tombol Pembayaran di bawah total charge
+Padding(
+  padding: const EdgeInsets.symmetric(vertical: 20),
+  child: ElevatedButton(
+    onPressed: () {
+      // Navigasi ke PembayaranScreen dan kirim orderMenu sebagai parameter
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PembayaranScreen(orderMenu: orderMenu),  // Kirim orderMenu ke PembayaranScreen
+        ),
+      );
+    },
+    child: Text('Pembayaran'),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.black12,
+      padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
+      textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+    ),
+  ),
+),
+
+                    ],
                   ),
                 ),
               ],
