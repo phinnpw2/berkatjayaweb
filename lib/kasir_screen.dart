@@ -92,6 +92,85 @@ class _KasirScreenState extends State<KasirScreen> {
     return total;
   }
 
+  // Fungsi untuk mengupdate jumlah produk di order menu dan stok di Firestore
+  void updateQuantity(String id, int newQuantity) async {
+    final item = orderMenu.firstWhere((item) => item['id'] == id);
+
+    // Update jumlah produk
+    setState(() {
+      item['quantity'] = newQuantity;
+    });
+
+    // Update stok di Firestore
+    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+    final docSnapshot = await docRef.get();
+    final currentStock = docSnapshot.data()?['stok'] ?? 0;
+    docRef.update({'stok': currentStock - (newQuantity - item['quantity'])});
+  }
+
+  // Fungsi untuk menampilkan dialog edit jumlah produk
+  Future<void> _showEditDialog(int currentQuantity, String productId, int stock) async {
+    int newQuantity = currentQuantity;  // Inisialisasi dengan nilai default
+    TextEditingController controller = TextEditingController(text: currentQuantity.toString());
+
+    // Menampilkan dialog untuk mengedit jumlah
+    await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Jumlah'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                keyboardType: TextInputType.number,
+                controller: controller,
+                onChanged: (value) {
+                  newQuantity = int.tryParse(value) ?? currentQuantity; // Mengambil angka yang dimasukkan
+                },
+                decoration: InputDecoration(hintText: 'Masukkan jumlah'),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () async {
+                // Mengupdate jumlah produk yang baru dan stok produk
+                Navigator.pop(context, newQuantity);  // Kembali dengan jumlah baru
+              },
+              child: Text('Simpan'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, null);  // Membatalkan perubahan
+              },
+              child: Text('Batal'),
+            ),
+          ],
+        );
+      },
+    ).then((value) {
+      if (value != null && value > 0) {
+        // Update jumlah produk setelah input
+        setState(() {
+          final item = orderMenu.firstWhere((item) => item['id'] == productId);
+          final previousQuantity = item['quantity']; // Mendapatkan jumlah produk sebelumnya
+          item['quantity'] = value;
+
+          // Update stok produk di Firestore
+          final docRef = FirebaseFirestore.instance.collection('produk').doc(productId);
+          docRef.get().then((docSnapshot) {
+            if (docSnapshot.exists) {
+              final currentStock = docSnapshot.data()?['stok'] ?? 0;
+              // Kembalikan stok produk ke jumlah sebelumnya dan sesuaikan dengan perubahan jumlah
+              docRef.update({'stok': currentStock - (value - previousQuantity)});
+            }
+          });
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -229,6 +308,7 @@ class _KasirScreenState extends State<KasirScreen> {
                     itemCount: orderMenu.length,
                     itemBuilder: (context, index) {
                       final item = orderMenu[index];
+
                       return Card(
                         elevation: 5,
                         child: ListTile(
@@ -237,7 +317,16 @@ class _KasirScreenState extends State<KasirScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Button - untuk mengurangi jumlah produk
+                              // Tombol Edit
+                              IconButton(
+                                icon: Icon(Icons.edit, size: 20),
+                                onPressed: () async {
+                                  // Fungsi untuk mengedit jumlah produk
+                                  _showEditDialog(item['quantity'], item['id'], item['quantity']);
+                                },
+                              ),
+
+                              // Tombol pengurangan produk
                               IconButton(
                                 icon: Icon(Icons.remove, size: 20),
                                 onPressed: () {
@@ -247,7 +336,7 @@ class _KasirScreenState extends State<KasirScreen> {
                                 },
                               ),
                               
-                              // Button Hapus untuk menghapus produk
+                              // Tombol Hapus produk
                               IconButton(
                                 icon: Icon(Icons.delete, size: 20),
                                 onPressed: () {
