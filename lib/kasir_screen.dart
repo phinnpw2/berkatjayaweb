@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'pembayaran_screen.dart';  // Pastikan untuk mengimpor PembayaranScreen di sini
+import 'pembayaran_screen.dart';
 
 void main() {
   runApp(MaterialApp(
     home: KasirScreen(),
+    theme: ThemeData(
+      // Menggunakan TextStyle default tanpa bodyText1 atau bodyText2
+      primarySwatch: Colors.deepPurple,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+    ),
   ));
 }
 
@@ -15,7 +20,8 @@ class KasirScreen extends StatefulWidget {
 }
 
 class _KasirScreenState extends State<KasirScreen> {
-  String selectedCategory = "makanan";  // Default kategori makanan
+  String selectedCategory = "All";  // Default kategori All, menampilkan semua produk
+  String searchQuery = ""; // Variabel untuk menyimpan kata pencarian
   final List<Map<String, dynamic>> orderMenu = [];
 
   // Fungsi untuk menambah produk ke dalam order menu
@@ -93,6 +99,92 @@ class _KasirScreenState extends State<KasirScreen> {
     return total;
   }
 
+  // Fungsi untuk mengedit jumlah produk dalam order menu
+  void editItemQuantity(String id, String name, double price, int currentQuantity, int stock) async {
+    int availableStock = stock + currentQuantity; // Stok yang tersedia adalah stok saat ini ditambah dengan jumlah yang sudah ada di order menu
+
+    int newQuantity = currentQuantity; // Inisialisasi jumlah produk saat ini
+    TextEditingController quantityController = TextEditingController(text: currentQuantity.toString());
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Jumlah $name'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: quantityController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: 'Jumlah'),
+              ),
+              SizedBox(height: 10),
+              Text('Stok tersedia: $availableStock'), // Menampilkan stok yang tersedia
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                int updatedQuantity = int.tryParse(quantityController.text) ?? currentQuantity;
+                if (updatedQuantity <= availableStock) {
+                  setState(() {
+                    for (var item in orderMenu) {
+                      if (item['id'] == id) {
+                        item['quantity'] = updatedQuantity;
+                        break;
+                      }
+                    }
+                  });
+
+                  // Update stok di Firestore
+                  final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+                  try {
+                    final docSnapshot = await docRef.get();
+                    if (docSnapshot.exists) {
+                      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+                      await docRef.update({'stok': currentStock - (updatedQuantity - currentQuantity)});
+                      Navigator.of(context).pop();  // Menutup dialog setelah update
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Produk tidak ditemukan!')));
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
+                }
+              },
+              child: Text('Simpan'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Batal'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Fungsi untuk memeriksa apakah ada produk di order menu sebelum melakukan pembayaran
+  void handlePayment() {
+    if (orderMenu.isEmpty) {
+      // Menampilkan notifikasi jika order menu kosong
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
+    } else {
+      // Jika ada produk, lanjutkan ke halaman pembayaran
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PembayaranScreen(orderMenu: orderMenu),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,7 +199,7 @@ class _KasirScreenState extends State<KasirScreen> {
             flex: 2,
             child: Column(
               children: [
-                // Kategori Buttons (Makanan dan Minuman)
+                // Kategori Buttons (All, Makanan, Minuman)
                 Container(
                   padding: EdgeInsets.all(10),
                   color: Colors.deepPurpleAccent,
@@ -115,23 +207,55 @@ class _KasirScreenState extends State<KasirScreen> {
                     mainAxisAlignment: MainAxisAlignment.start, // Tombol kiri
                     children: [
                       CategoryButton(
-                        label: 'Makanan',
-                        isSelected: selectedCategory == 'makanan',
+                        label: 'All',  // Tambahkan kategori All
+                        isSelected: selectedCategory == 'All',
                         onPressed: () {
                           setState(() {
-                            selectedCategory = 'makanan';
+                            selectedCategory = 'All';
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      CategoryButton(
+                        label: 'Makanan',
+                        isSelected: selectedCategory == 'Makanan',
+                        onPressed: () {
+                          setState(() {
+                            selectedCategory = 'Makanan';
                           });
                         },
                       ),
                       const SizedBox(width: 10),
                       CategoryButton(
                         label: 'Minuman',
-                        isSelected: selectedCategory == 'minuman',
+                        isSelected: selectedCategory == 'Minuman',
                         onPressed: () {
                           setState(() {
-                            selectedCategory = 'minuman';
+                            selectedCategory = 'Minuman';
                           });
                         },
+                      ),
+                      const SizedBox(width: 10),
+                      // Kolom pencarian di sebelah kanan kategori
+                      Container(
+                        width: 220,
+                        child: TextField(
+                          onChanged: (query) {
+                            setState(() {
+                              searchQuery = query;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            labelText: 'Cari Produk',
+                            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.deepPurpleAccent),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -142,7 +266,7 @@ class _KasirScreenState extends State<KasirScreen> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('produk')
-                        .where('kategori', isEqualTo: selectedCategory)
+                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
                         .orderBy('timestamp', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
@@ -192,10 +316,10 @@ class _KasirScreenState extends State<KasirScreen> {
                                         ),
                                       )
                                     : const Icon(Icons.fastfood, size: 50),
-                                Text(name, style: TextStyle(fontSize: 16)),
+                                Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 Text('Stok: $stock', style: TextStyle(fontSize: 16)),
                                 IconButton(
-                                  icon: Icon(Icons.add, size: 30),
+                                  icon: Icon(Icons.add, size: 30, color: Colors.deepPurple),
                                   onPressed: () {
                                     addToOrder(id, name, price, stock);
                                   },
@@ -243,7 +367,18 @@ class _KasirScreenState extends State<KasirScreen> {
                               IconButton(
                                 icon: Icon(Icons.edit, size: 20),
                                 onPressed: () async {
-                                  // Fungsi untuk mengedit jumlah produk
+                                  final item = orderMenu[index];
+                                  final id = item['id'];
+                                  final name = item['name'];
+                                  final currentQuantity = item['quantity'];
+
+                                  // Ambil stok produk dari Firestore untuk memastikan stok yang tersedia
+                                  final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+                                  final docSnapshot = await docRef.get();
+                                  if (docSnapshot.exists) {
+                                    final stock = docSnapshot.data()?['stok'] ?? 0;
+                                    editItemQuantity(id, name, item['price'], currentQuantity, stock); // Menampilkan dialog edit jumlah produk
+                                  }
                                 },
                               ),
 
@@ -282,27 +417,18 @@ class _KasirScreenState extends State<KasirScreen> {
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       // Tombol Pembayaran di bawah total charge
-Padding(
-  padding: const EdgeInsets.symmetric(vertical: 20),
-  child: ElevatedButton(
-    onPressed: () {
-      // Navigasi ke PembayaranScreen dan kirim orderMenu sebagai parameter
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PembayaranScreen(orderMenu: orderMenu),  // Kirim orderMenu ke PembayaranScreen
-        ),
-      );
-    },
-    child: Text('Pembayaran'),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.black12,
-      padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
-      textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-    ),
-  ),
-),
-
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: ElevatedButton(
+                          onPressed: handlePayment,  // Memanggil fungsi handlePayment
+                          child: Text('Pembayaran'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurpleAccent,
+                            padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
+                            textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

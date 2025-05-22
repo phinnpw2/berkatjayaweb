@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:  PembayaranScreen(), // Menampilkan HomeScreen pertama kali
+      home:  KasirScreen(), // Menampilkan HomeScreen pertama kali
     );
   }
 }
