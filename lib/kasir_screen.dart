@@ -7,7 +7,6 @@ void main() {
   runApp(MaterialApp(
     home: KasirScreen(),
     theme: ThemeData(
-      // Menggunakan TextStyle default tanpa bodyText1 atau bodyText2
       primarySwatch: Colors.deepPurple,
       visualDensity: VisualDensity.adaptivePlatformDensity,
     ),
@@ -20,8 +19,9 @@ class KasirScreen extends StatefulWidget {
 }
 
 class _KasirScreenState extends State<KasirScreen> {
-  String selectedCategory = "All";  // Default kategori All, menampilkan semua produk
+  String selectedCategory = "All"; // Default kategori All, menampilkan semua produk
   String searchQuery = ""; // Variabel untuk menyimpan kata pencarian
+  bool isDropdownVisible = false; // Menyimpan status dropdown
   final List<Map<String, dynamic>> orderMenu = [];
 
   // Fungsi untuk menambah produk ke dalam order menu
@@ -172,10 +172,8 @@ class _KasirScreenState extends State<KasirScreen> {
   // Fungsi untuk memeriksa apakah ada produk di order menu sebelum melakukan pembayaran
   void handlePayment() {
     if (orderMenu.isEmpty) {
-      // Menampilkan notifikasi jika order menu kosong
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
     } else {
-      // Jika ada produk, lanjutkan ke halaman pembayaran
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -206,57 +204,57 @@ class _KasirScreenState extends State<KasirScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start, // Tombol kiri
                     children: [
-                      CategoryButton(
-                        label: 'All',  // Tambahkan kategori All
-                        isSelected: selectedCategory == 'All',
-                        onPressed: () {
+                      GestureDetector(
+                        onTap: () {
                           setState(() {
                             selectedCategory = 'All';
+                            isDropdownVisible = !isDropdownVisible; // Toggle dropdown
                           });
                         },
-                      ),
-                      const SizedBox(width: 10),
-                      CategoryButton(
-                        label: 'Makanan',
-                        isSelected: selectedCategory == 'Makanan',
-                        onPressed: () {
-                          setState(() {
-                            selectedCategory = 'Makanan';
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                      CategoryButton(
-                        label: 'Minuman',
-                        isSelected: selectedCategory == 'Minuman',
-                        onPressed: () {
-                          setState(() {
-                            selectedCategory = 'Minuman';
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                      // Kolom pencarian di sebelah kanan kategori
-                      Container(
-                        width: 220,
-                        child: TextField(
-                          onChanged: (query) {
-                            setState(() {
-                              searchQuery = query;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            labelText: 'Cari Produk',
-                            labelStyle: TextStyle(fontSize: 14, color: Colors.black),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Colors.deepPurpleAccent),
+                        child: Row(
+                          children: [
+                            CategoryButton(
+                              label: selectedCategory == 'All' ? 'All' : selectedCategory,
+                              isSelected: selectedCategory == 'All',
+                              onPressed: () {
+                                setState(() {
+                                  selectedCategory = 'All';
+                                  isDropdownVisible = !isDropdownVisible;
+                                });
+                              }, 
                             ),
-                          ),
+                            Icon(
+                              isDropdownVisible
+                                  ? Icons.arrow_drop_up
+                                  : Icons.arrow_drop_down,
+                              size: 24,
+                            ),
+                          ],
                         ),
                       ),
+                      if (isDropdownVisible) ...[
+                        CategoryButton(
+                          label: 'Makanan',
+                          isSelected: selectedCategory == 'makanan',
+                          onPressed: () {
+                            setState(() {
+                              selectedCategory = 'makanan';
+                              isDropdownVisible = false;
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        CategoryButton(
+                          label: 'Minuman',
+                          isSelected: selectedCategory == 'minuman',
+                          onPressed: () {
+                            setState(() {
+                              selectedCategory = 'minuman';
+                              isDropdownVisible = false;
+                            });
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -266,7 +264,7 @@ class _KasirScreenState extends State<KasirScreen> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('produk')
-                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
+                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory) // Memfilter berdasarkan kategori yang dipilih
                         .orderBy('timestamp', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
@@ -342,13 +340,11 @@ class _KasirScreenState extends State<KasirScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Order Menu Title
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
 
-                // Order items grid
                 Expanded(
                   child: ListView.builder(
                     itemCount: orderMenu.length,
@@ -363,7 +359,6 @@ class _KasirScreenState extends State<KasirScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Tombol Edit
                               IconButton(
                                 icon: Icon(Icons.edit, size: 20),
                                 onPressed: () async {
@@ -371,18 +366,14 @@ class _KasirScreenState extends State<KasirScreen> {
                                   final id = item['id'];
                                   final name = item['name'];
                                   final currentQuantity = item['quantity'];
-
-                                  // Ambil stok produk dari Firestore untuk memastikan stok yang tersedia
                                   final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
                                   final docSnapshot = await docRef.get();
                                   if (docSnapshot.exists) {
                                     final stock = docSnapshot.data()?['stok'] ?? 0;
-                                    editItemQuantity(id, name, item['price'], currentQuantity, stock); // Menampilkan dialog edit jumlah produk
+                                    editItemQuantity(id, name, item['price'], currentQuantity, stock);
                                   }
                                 },
                               ),
-
-                              // Tombol pengurangan produk
                               IconButton(
                                 icon: Icon(Icons.remove, size: 20),
                                 onPressed: () {
@@ -392,7 +383,6 @@ class _KasirScreenState extends State<KasirScreen> {
                                 },
                               ),
                               
-                              // Tombol Hapus produk
                               IconButton(
                                 icon: Icon(Icons.delete, size: 20),
                                 onPressed: () {
@@ -407,7 +397,6 @@ class _KasirScreenState extends State<KasirScreen> {
                   ),
                 ),
 
-                // Total charge di bagian bawah order menu
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
@@ -416,11 +405,10 @@ class _KasirScreenState extends State<KasirScreen> {
                         'Total: Rp ${totalCharge.toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      // Tombol Pembayaran di bawah total charge
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         child: ElevatedButton(
-                          onPressed: handlePayment,  // Memanggil fungsi handlePayment
+                          onPressed: handlePayment,
                           child: Text('Pembayaran'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurpleAccent,
