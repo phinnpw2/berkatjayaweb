@@ -232,7 +232,7 @@ class _KasirScreenState extends State<KasirScreen> {
                           ],
                         ),
                       ),
-                      if (isDropdownVisible) ...[
+                      if (isDropdownVisible) ...[ // Dropdown Makanan & Minuman
                         CategoryButton(
                           label: 'Makanan',
                           isSelected: selectedCategory == 'makanan',
@@ -255,6 +255,30 @@ class _KasirScreenState extends State<KasirScreen> {
                           },
                         ),
                       ],
+                      // Menambahkan search bar untuk filter produk
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: TextField(
+                            onChanged: (query) {
+                              setState(() {
+                                searchQuery = query;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: "Cari Produk...",
+                              hintStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: Colors.white, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -264,7 +288,7 @@ class _KasirScreenState extends State<KasirScreen> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('produk')
-                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory) // Memfilter berdasarkan kategori yang dipilih
+                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
                         .orderBy('timestamp', descending: true)
                         .snapshots(),
                     builder: (context, snapshot) {
@@ -273,8 +297,13 @@ class _KasirScreenState extends State<KasirScreen> {
                       }
 
                       final docs = snapshot.data!.docs;
-                      if (docs.isEmpty) {
-                        return const Center(child: Text('Belum ada produk'));
+                      final filteredDocs = docs.where((doc) {
+                        final name = doc['nama'].toString().toLowerCase();
+                        return name.contains(searchQuery.toLowerCase());
+                      }).toList();
+
+                      if (filteredDocs.isEmpty) {
+                        return const Center(child: Text('Produk tidak ditemukan'));
                       }
 
                       return GridView.builder(
@@ -285,9 +314,9 @@ class _KasirScreenState extends State<KasirScreen> {
                           mainAxisSpacing: 12,
                           childAspectRatio: 1.4,
                         ),
-                        itemCount: docs.length,
+                        itemCount: filteredDocs.length,
                         itemBuilder: (context, index) {
-                          final doc = docs[index];
+                          final doc = filteredDocs[index];
                           final data = doc.data() as Map<String, dynamic>;
                           final id = doc.id;
                           final name = data['nama'] ?? '';

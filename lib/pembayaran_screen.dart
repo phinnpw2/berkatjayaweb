@@ -12,6 +12,7 @@ class PembayaranScreen extends StatefulWidget {
 class _PembayaranScreenState extends State<PembayaranScreen> {
   late double totalAmount;
   TextEditingController amountPaidController = TextEditingController();
+  TextEditingController customerNameController = TextEditingController(); // Menambahkan controller untuk nama pelanggan
   double change = 0.0;
   String paymentMethod = 'Cash';  // Default payment method
 
@@ -47,11 +48,34 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
         backgroundColor: Colors.deepPurpleAccent,
         elevation: 5,
       ),
-      body: Padding(
+      body: SingleChildScrollView( // Membungkus body dengan SingleChildScrollView
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Input untuk Nama Pelanggan
+            TextField(
+              controller: customerNameController,
+              decoration: InputDecoration(
+                labelText: 'Nama Pelanggan',
+                hintText: 'Masukkan nama pelanggan',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.grey.shade100,
+              ),
+              onChanged: (text) {
+                setState(() {}); // Memperbarui tampilan setiap kali ada perubahan pada nama pelanggan
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Menampilkan nama pelanggan
+            Text(
+              'Nama Pelanggan: ${customerNameController.text.isEmpty ? 'Belum diisi' : customerNameController.text}',
+              style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+            ),
+            SizedBox(height: 20),
+
             // Menampilkan total harga
             Text('Total yang harus dibayar:', style: TextStyle(fontSize: 18, color: Colors.grey[700])),
             SizedBox(height: 5),
