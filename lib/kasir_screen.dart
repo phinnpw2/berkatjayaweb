@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pesanan_screen.dart';  // Pastikan PesananScreen sudah ada di project Anda
 import 'pembayaran_screen.dart';
 
 void main() {
@@ -169,7 +170,52 @@ class _KasirScreenState extends State<KasirScreen> {
     );
   }
 
-  // Fungsi untuk memeriksa apakah ada produk di order menu sebelum melakukan pembayaran
+  // Fungsi untuk menyimpan pesanan dan menuju ke PesananScreen
+  void saveOrder() async {
+    if (orderMenu.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada pesanan untuk disimpan')));
+      return;
+    }
+
+    try {
+      // Menyimpan orderMenu ke Firestore atau tempat penyimpanan lain
+      await FirebaseFirestore.instance.collection('pesanan').add({
+        'orderMenu': orderMenu,
+        'totalCharge': totalCharge,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // Reset orderMenu setelah pesanan disimpan
+      setState(() {
+        orderMenu.clear();
+      });
+
+      // Menampilkan notifikasi jika berhasil menyimpan pesanan
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil disimpan')));
+
+      // Arahkan ke PesananScreen setelah menyimpan
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PesananScreen(),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan pesanan: $e')));
+    }
+  }
+
+  // Fungsi untuk mengakses riwayat pesanan
+  void viewOrderHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PesananScreen(),
+      ),
+    );
+  }
+
+  // Fungsi untuk memproses pembayaran
   void handlePayment() {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
@@ -221,7 +267,7 @@ class _KasirScreenState extends State<KasirScreen> {
                                   selectedCategory = 'All';
                                   isDropdownVisible = !isDropdownVisible;
                                 });
-                              }, 
+                              },
                             ),
                             Icon(
                               isDropdownVisible
@@ -427,28 +473,56 @@ class _KasirScreenState extends State<KasirScreen> {
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Total: Rp ${totalCharge.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: ElevatedButton(
-                          onPressed: handlePayment,
-                          child: Text('Pembayaran'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurpleAccent,
-                            padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
-                            textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+  padding: const EdgeInsets.symmetric(vertical: 8.0),
+  child: ElevatedButton(
+    onPressed: saveOrder,  // Panggil fungsi untuk menyimpan pesanan
+    child: Text('Simpan'),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.deepPurpleAccent,
+      padding: EdgeInsets.symmetric(horizontal: 190, vertical: 10), // Menyesuaikan padding tombol
+      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30), // Rounded corners
+      ),
+    ),
+  ),
+),
+Padding(
+  padding: const EdgeInsets.symmetric(vertical: 8.0),
+  child: ElevatedButton(
+    onPressed: handlePayment,  // Panggil fungsi pembayaran
+    child: Text('Pembayaran'),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.deepPurpleAccent,
+      padding: EdgeInsets.symmetric(horizontal: 174, vertical: 10), // Menyesuaikan padding tombol
+      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30), // Rounded corners
+      ),
+    ),
+  ),
+),
+Padding(
+  padding: const EdgeInsets.symmetric(vertical: 8.0),
+  child: ElevatedButton(
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => PesananScreen()),
+      );
+    },
+    child: Text('Riwayat Pesanan'),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.deepPurpleAccent,
+      padding: EdgeInsets.symmetric(horizontal: 156, vertical: 10), // Menyesuaikan padding tombol
+      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30), // Rounded corners
+      ),
+    ),
+  ),
+),
+
               ],
             ),
           ),
