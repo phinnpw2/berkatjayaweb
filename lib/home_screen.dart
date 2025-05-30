@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'produk_page.dart';
 import 'kasir_screen.dart';
+import 'notatempo_screen.dart';  // Impor NotaTempoScreen
 import 'pengaturan_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -115,9 +116,41 @@ class HomeScreen extends StatelessWidget {
                           final title = categories[index]['title'];
 
                           if (title == 'Kasir') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => KasirScreen()),
+                            // Pilih antara Kasir langsung atau Nota Tempo
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text('Pilih Mode Kasir'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        title: Text('Kasir Langsung'),
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => KasirScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      ListTile(
+                                        title: Text('Nota Tempo'),
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => NotaTempoScreen(), // Arahkan ke Nota Tempo
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             );
                           } else if (title == 'Stok Produk') {
                             Navigator.push(

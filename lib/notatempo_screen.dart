@@ -1,15 +1,13 @@
-import 'dart:convert';
-
+import 'package:berkatjaya_web/pesanan_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'pembayaran_screen.dart';
 
-class KasirScreen extends StatefulWidget {
+class NotaTempoScreen extends StatefulWidget {
   @override
-  _KasirScreenState createState() => _KasirScreenState();
+  _NotaTempoScreenState createState() => _NotaTempoScreenState();
 }
 
-class _KasirScreenState extends State<KasirScreen> {
+class _NotaTempoScreenState extends State<NotaTempoScreen> {
   String selectedCategory = "All"; // Default kategori All, menampilkan semua produk
   String searchQuery = ""; // Variabel untuk menyimpan kata pencarian
   bool isDropdownVisible = false; // Menyimpan status dropdown
@@ -46,8 +44,38 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
-  // Menghitung total harga dari produk yang ada di order menu
-  double get totalCharge {
+  // Fungsi untuk menyimpan nota
+  void saveNota() async {
+    if (orderMenu.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada pesanan untuk disimpan')));
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('nota_temp').add({
+        'orderMenu': orderMenu,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      setState(() {
+        orderMenu.clear();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Nota berhasil disimpan')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan nota: $e')));
+    }
+  }
+
+  // Fungsi untuk melihat riwayat nota
+  void viewNotaHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PesananScreen()),
+    );
+  }
+
+  double getTotalCharge() {
     double total = 0;
     for (var item in orderMenu) {
       total += item['price'] * item['quantity'];
@@ -55,25 +83,11 @@ class _KasirScreenState extends State<KasirScreen> {
     return total;
   }
 
-  // Fungsi untuk memproses pembayaran
-  void handlePayment() {
-    if (orderMenu.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PembayaranScreen(orderMenu: orderMenu),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Kasir App'),
+        title: Text('Nota Tempo'),
         backgroundColor: Colors.deepPurpleAccent,
       ),
       body: Row(
@@ -208,7 +222,6 @@ class _KasirScreenState extends State<KasirScreen> {
                           final name = data['nama'] ?? '';
                           final stock = data['stok'] ?? 0;
                           final price = data['harga'] ?? 0.0;
-                          final base64Image = data['gambar'] ?? '';
 
                           return Card(
                             elevation: 5,
@@ -218,17 +231,7 @@ class _KasirScreenState extends State<KasirScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                base64Image.isNotEmpty
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.memory(
-                                          base64Decode(base64Image),
-                                          width: 50,
-                                          height: 50,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      )
-                                    : const Icon(Icons.fastfood, size: 50),
+                                Icon(Icons.fastfood, size: 50),
                                 Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 Text('Stok: $stock', style: TextStyle(fontSize: 16)),
                                 IconButton(
@@ -277,6 +280,7 @@ class _KasirScreenState extends State<KasirScreen> {
                               IconButton(
                                 icon: Icon(Icons.remove, size: 20),
                                 onPressed: () {
+                                  // Fungsi untuk mengurangi jumlah item
                                   if (item['quantity'] > 1) {
                                     setState(() {
                                       item['quantity']--;
@@ -287,6 +291,7 @@ class _KasirScreenState extends State<KasirScreen> {
                               IconButton(
                                 icon: Icon(Icons.delete, size: 20),
                                 onPressed: () {
+                                  // Fungsi untuk menghapus item dari daftar pesanan
                                   setState(() {
                                     orderMenu.removeAt(index);
                                   });
@@ -303,8 +308,24 @@ class _KasirScreenState extends State<KasirScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: ElevatedButton(
-                    onPressed: handlePayment,  // Panggil fungsi pembayaran
-                    child: Text('Pembayaran'),
+                    onPressed: saveNota,  // Panggil fungsi untuk menyimpan nota
+                    child: Text('Simpan Nota'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurpleAccent,
+                      padding: EdgeInsets.symmetric(horizontal: 190, vertical: 10),
+                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ElevatedButton(
+                    onPressed: viewNotaHistory,  // Tampilkan riwayat nota
+                    child: Text('Riwayat Nota'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurpleAccent,
                       padding: EdgeInsets.symmetric(horizontal: 174, vertical: 10),
