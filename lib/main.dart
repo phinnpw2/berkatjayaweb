@@ -1,5 +1,6 @@
 import 'package:berkatjaya_web/kasir_screen.dart';
 import 'package:berkatjaya_web/login_screen.dart';
+import 'package:berkatjaya_web/notatempo_screen.dart';
 import 'package:berkatjaya_web/pembayaran_screen.dart';
 import 'package:berkatjaya_web/produk_page.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:  LoginPage(), // Menampilkan HomeScreen pertama kali
+      home:  KasirScreen(), // Menampilkan HomeScreen pertama kali
     );
   }
 }

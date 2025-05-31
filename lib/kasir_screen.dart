@@ -1,8 +1,17 @@
-import 'dart:convert';
-
+import 'dart:convert'; 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'pembayaran_screen.dart';
+
+void main() {
+  runApp(MaterialApp(
+    home: KasirScreen(),
+    theme: ThemeData(
+      primarySwatch: Colors.deepPurple,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+    ),
+  ));
+}
 
 class KasirScreen extends StatefulWidget {
   @override
@@ -46,6 +55,41 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
+  // Fungsi untuk mengurangi produk dalam order menu
+  void removeOneItem(String id, double price) async {
+    setState(() {
+      for (var item in orderMenu) {
+        if (item['id'] == id && item['quantity'] > 1) {
+          item['quantity']--;
+          break;
+        }
+      }
+    });
+
+    // Update stok di Firestore
+    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+    final docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+      docRef.update({'stok': currentStock + 1});
+    }
+  }
+
+  // Fungsi untuk menghapus produk dari order menu
+  void removeItemFromOrder(String id, int quantity) async {
+    setState(() {
+      orderMenu.removeWhere((item) => item['id'] == id);
+    });
+
+    // Update stok di Firestore
+    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+    final docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+      docRef.update({'stok': currentStock + quantity});
+    }
+  }
+
   // Menghitung total harga dari produk yang ada di order menu
   double get totalCharge {
     double total = 0;
@@ -55,7 +99,77 @@ class _KasirScreenState extends State<KasirScreen> {
     return total;
   }
 
-  // Fungsi untuk memproses pembayaran
+  // Fungsi untuk mengedit jumlah produk dalam order menu
+  void editItemQuantity(String id, String name, double price, int currentQuantity, int stock) async {
+    int availableStock = stock + currentQuantity; // Stok yang tersedia adalah stok saat ini ditambah dengan jumlah yang sudah ada di order menu
+
+    int newQuantity = currentQuantity; // Inisialisasi jumlah produk saat ini
+    TextEditingController quantityController = TextEditingController(text: currentQuantity.toString());
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Jumlah $name'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: quantityController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: 'Jumlah'),
+              ),
+              SizedBox(height: 10),
+              Text('Stok tersedia: $availableStock'), // Menampilkan stok yang tersedia
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                int updatedQuantity = int.tryParse(quantityController.text) ?? currentQuantity;
+                if (updatedQuantity <= availableStock) {
+                  setState(() {
+                    for (var item in orderMenu) {
+                      if (item['id'] == id) {
+                        item['quantity'] = updatedQuantity;
+                        break;
+                      }
+                    }
+                  });
+
+                  // Update stok di Firestore
+                  final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+                  try {
+                    final docSnapshot = await docRef.get();
+                    if (docSnapshot.exists) {
+                      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+                      await docRef.update({'stok': currentStock - (updatedQuantity - currentQuantity)});
+                      Navigator.of(context).pop();  // Menutup dialog setelah update
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Produk tidak ditemukan!')));
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
+                }
+              },
+              child: Text('Simpan'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Batal'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Fungsi untuk memeriksa apakah ada produk di order menu sebelum melakukan pembayaran
   void handlePayment() {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
@@ -88,7 +202,7 @@ class _KasirScreenState extends State<KasirScreen> {
                   padding: EdgeInsets.all(10),
                   color: Colors.deepPurpleAccent,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start, // Tombol kiri
                     children: [
                       GestureDetector(
                         onTap: () {
@@ -118,7 +232,7 @@ class _KasirScreenState extends State<KasirScreen> {
                           ],
                         ),
                       ),
-                      if (isDropdownVisible) ...[ // Dropdown Makanan & Minuman
+                      if (isDropdownVisible) ...[
                         CategoryButton(
                           label: 'Makanan',
                           isSelected: selectedCategory == 'makanan',
@@ -168,8 +282,7 @@ class _KasirScreenState extends State<KasirScreen> {
                     ],
                   ),
                 ),
-
-                // Grid Produk berdasarkan kategori yang dipilih
+                // Grid Produk berdasarkan kategori yang dipilih dan pencarian
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
@@ -183,14 +296,15 @@ class _KasirScreenState extends State<KasirScreen> {
                       }
 
                       final docs = snapshot.data!.docs;
-                      final filteredDocs = docs.where((doc) {
-                        final name = doc['nama'].toString().toLowerCase();
-                        return name.contains(searchQuery.toLowerCase());
-                      }).toList();
-
-                      if (filteredDocs.isEmpty) {
-                        return const Center(child: Text('Produk tidak ditemukan'));
+                      if (docs.isEmpty) {
+                        return const Center(child: Text('Belum ada produk'));
                       }
+
+                      final filteredDocs = docs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final name = data['nama'] ?? '';
+                        return name.toLowerCase().contains(searchQuery.toLowerCase());
+                      }).toList();
 
                       return GridView.builder(
                         padding: const EdgeInsets.all(16),
@@ -275,21 +389,33 @@ class _KasirScreenState extends State<KasirScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: Icon(Icons.remove, size: 20),
-                                onPressed: () {
-                                  if (item['quantity'] > 1) {
-                                    setState(() {
-                                      item['quantity']--;
-                                    });
+                                icon: Icon(Icons.edit, size: 20),
+                                onPressed: () async {
+                                  final item = orderMenu[index];
+                                  final id = item['id'];
+                                  final name = item['name'];
+                                  final currentQuantity = item['quantity'];
+                                  final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+                                  final docSnapshot = await docRef.get();
+                                  if (docSnapshot.exists) {
+                                    final stock = docSnapshot.data()?['stok'] ?? 0;
+                                    editItemQuantity(id, name, item['price'], currentQuantity, stock);
                                   }
                                 },
                               ),
                               IconButton(
+                                icon: Icon(Icons.remove, size: 20),
+                                onPressed: () {
+                                  if (item['quantity'] > 1) {
+                                    removeOneItem(item['id'], item['price']);
+                                  }
+                                },
+                              ),
+                              
+                              IconButton(
                                 icon: Icon(Icons.delete, size: 20),
                                 onPressed: () {
-                                  setState(() {
-                                    orderMenu.removeAt(index);
-                                  });
+                                  removeItemFromOrder(item['id'], item['quantity']);
                                 },
                               ),
                             ],
@@ -301,18 +427,26 @@ class _KasirScreenState extends State<KasirScreen> {
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ElevatedButton(
-                    onPressed: handlePayment,  // Panggil fungsi pembayaran
-                    child: Text('Pembayaran'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurpleAccent,
-                      padding: EdgeInsets.symmetric(horizontal: 174, vertical: 10),
-                      textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Total: Rp ${totalCharge.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: ElevatedButton(
+                          onPressed: handlePayment,
+                          child: Text('Pembayaran'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurpleAccent,
+                            padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
+                            textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

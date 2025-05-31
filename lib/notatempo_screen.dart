@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:berkatjaya_web/pesanan_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,7 +15,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
   final List<Map<String, dynamic>> orderMenu = [];
 
   // Fungsi untuk menambah produk ke dalam order menu
-  void addToOrder(String id, String name, double price, int stock) async {
+  void addToOrder(String id, String name, double price, int stock, String image) async {
     if (stock > 0) {
       setState(() {
         bool itemExists = false;
@@ -26,7 +27,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
           }
         }
         if (!itemExists) {
-          orderMenu.add({'id': id, 'name': name, 'price': price, 'quantity': 1});
+          orderMenu.add({'id': id, 'name': name, 'price': price, 'quantity': 1, 'image': image});
         }
       });
 
@@ -222,6 +223,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                           final name = data['nama'] ?? '';
                           final stock = data['stok'] ?? 0;
                           final price = data['harga'] ?? 0.0;
+                          final base64Image = data['gambar'] ?? '';
 
                           return Card(
                             elevation: 5,
@@ -231,13 +233,23 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.fastfood, size: 50),
+                                base64Image.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.memory(
+                                          base64Decode(base64Image),
+                                          width: 50,
+                                          height: 50,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : const Icon(Icons.fastfood, size: 50),
                                 Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 Text('Stok: $stock', style: TextStyle(fontSize: 16)),
                                 IconButton(
                                   icon: Icon(Icons.add, size: 30, color: Colors.deepPurple),
                                   onPressed: () {
-                                    addToOrder(id, name, price, stock);
+                                    addToOrder(id, name, price, stock, base64Image);
                                   },
                                 ),
                               ],
@@ -260,7 +272,17 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: Icon(Icons.history, size: 30, color: Colors.deepPurple),
+                        onPressed: viewNotaHistory, // Tampilkan riwayat nota
+                        tooltip: 'Riwayat Nota',
+                      ),
+                    ],
+                  ),
                 ),
 
                 Expanded(
@@ -280,7 +302,6 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                               IconButton(
                                 icon: Icon(Icons.remove, size: 20),
                                 onPressed: () {
-                                  // Fungsi untuk mengurangi jumlah item
                                   if (item['quantity'] > 1) {
                                     setState(() {
                                       item['quantity']--;
@@ -291,7 +312,6 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                               IconButton(
                                 icon: Icon(Icons.delete, size: 20),
                                 onPressed: () {
-                                  // Fungsi untuk menghapus item dari daftar pesanan
                                   setState(() {
                                     orderMenu.removeAt(index);
                                   });
