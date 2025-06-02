@@ -20,12 +20,12 @@ class _PesananScreenState extends State<PesananScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      fieldLabelText: 'Select Start Date',
+      fieldLabelText: 'Pilih Tanggal Mulai', // Ganti label dengan Bahasa Indonesia
       initialDatePickerMode: DatePickerMode.day, // Memulai dengan mode hari
     );
     if (picked != null && picked != startDate) {
       setState(() {
-        startDate = DateTime(picked.year, picked.month, picked.day); // Set tanggal ke 1 di bulan yang dipilih
+        startDate = picked; // Menyimpan tanggal yang dipilih
       });
     }
   }
@@ -37,12 +37,12 @@ class _PesananScreenState extends State<PesananScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      fieldLabelText: 'Select End Date',
+      fieldLabelText: 'Pilih Tanggal Akhir', // Ganti label dengan Bahasa Indonesia
       initialDatePickerMode: DatePickerMode.day, // Memulai dengan mode hari
     );
     if (picked != null && picked != endDate) {
       setState(() {
-        endDate = DateTime(picked.year, picked.month, picked.day); // Set tanggal ke 1 di bulan yang dipilih
+        endDate = picked; // Menyimpan tanggal yang dipilih
       });
     }
   }
@@ -78,7 +78,6 @@ class _PesananScreenState extends State<PesananScreen> {
       ),
       body: Column(
         children: [
-          // TextField untuk pencarian nama pelanggan
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: TextField(
@@ -104,14 +103,14 @@ class _PesananScreenState extends State<PesananScreen> {
               ElevatedButton(
                 onPressed: () => selectStartDate(context),
                 child: Text(
-                    startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!)),
+                    startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!)), // Format tanggal Indonesia
               ),
               SizedBox(width: 10),
               // Pilih Tanggal Akhir
               ElevatedButton(
                 onPressed: () => selectEndDate(context),
                 child: Text(
-                    endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!)),
+                    endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!)), // Format tanggal Indonesia
               ),
             ],
           ),
@@ -171,22 +170,18 @@ class _PesananScreenState extends State<PesananScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Menampilkan nama pelanggan dan waktu dengan format tanggal, jam dan menit
                             Text(
                               '$customerName - Pesanan pada $formattedTime',
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 10),
-                            // Menampilkan total harga
                             Text(
                               'Total: Rp ${totalCharge.toStringAsFixed(2)}',
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 10),
-                            // Tombol untuk melihat detail pesanan
                             TextButton(
                               onPressed: () {
-                                // Navigasi ke halaman detail pesanan
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -196,16 +191,15 @@ class _PesananScreenState extends State<PesananScreen> {
                               },
                               child: Text('Lihat Detail Pesanan'),
                             ),
-                            // Tombol Hapus Pesanan
                             ElevatedButton(
                               onPressed: () => deleteOrder(orderId, orderMenu),
                               child: Text('Hapus Pesanan'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent, // Tombol merah untuk hapus
+                                backgroundColor: Colors.redAccent,
                                 padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
                                 textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30), // Rounded corners
+                                  borderRadius: BorderRadius.circular(30),
                                 ),
                               ),
                             ),
@@ -256,7 +250,6 @@ class DetailPesananScreen extends StatelessWidget {
 
           return Column(
             children: [
-              // Daftar produk pesanan
               Expanded(
                 child: ListView.builder(
                   itemCount: orderMenu.length,
@@ -269,7 +262,6 @@ class DetailPesananScreen extends StatelessWidget {
                   },
                 ),
               ),
-              // Menampilkan total harga
               Text(
                 'Total: Rp ${totalCharge.toStringAsFixed(2)}',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

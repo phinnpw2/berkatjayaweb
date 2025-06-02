@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:  NotaTempoScreen(), // Menampilkan HomeScreen pertama kali
+      home:  KasirScreen(), // Menampilkan HomeScreen pertama kali
     );
   }
 }
