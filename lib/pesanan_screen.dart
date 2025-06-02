@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl untuk format tanggal
+import 'package:berkatjaya_web/detailpesanan_screen.dart'; // Pastikan file ini ada dan sesuai
 
 class PesananScreen extends StatefulWidget {
   @override
@@ -8,6 +9,44 @@ class PesananScreen extends StatefulWidget {
 }
 
 class _PesananScreenState extends State<PesananScreen> {
+  String searchQuery = ""; // Variabel untuk pencarian nama pelanggan
+  DateTime? startDate;
+  DateTime? endDate;
+
+  // Fungsi untuk memilih tanggal mulai
+  Future<void> selectStartDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      fieldLabelText: 'Select Start Date',
+      initialDatePickerMode: DatePickerMode.day, // Memulai dengan mode hari
+    );
+    if (picked != null && picked != startDate) {
+      setState(() {
+        startDate = DateTime(picked.year, picked.month, picked.day); // Set tanggal ke 1 di bulan yang dipilih
+      });
+    }
+  }
+
+  // Fungsi untuk memilih tanggal akhir
+  Future<void> selectEndDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      fieldLabelText: 'Select End Date',
+      initialDatePickerMode: DatePickerMode.day, // Memulai dengan mode hari
+    );
+    if (picked != null && picked != endDate) {
+      setState(() {
+        endDate = DateTime(picked.year, picked.month, picked.day); // Set tanggal ke 1 di bulan yang dipilih
+      });
+    }
+  }
+
   // Fungsi untuk menghapus pesanan dan mengembalikan stok produk
   void deleteOrder(String orderId, List<dynamic> orderMenu) async {
     try {
@@ -37,88 +76,149 @@ class _PesananScreenState extends State<PesananScreen> {
         title: Text('Pesanan'),
         backgroundColor: Colors.deepPurpleAccent,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('pesanan')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          // TextField untuk pencarian nama pelanggan
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: TextField(
+              onChanged: (query) {
+                setState(() {
+                  searchQuery = query.toLowerCase(); // Mengubah pencarian menjadi lowercase untuk memudahkan pencarian
+                });
+              },
+              decoration: InputDecoration(
+                labelText: 'Cari Nama Pelanggan',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.deepPurpleAccent),
+                ),
+                prefixIcon: Icon(Icons.search),
+              ),
+            ),
+          ),
+          // Pilih Tanggal Mulai
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => selectStartDate(context),
+                child: Text(
+                    startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!)),
+              ),
+              SizedBox(width: 10),
+              // Pilih Tanggal Akhir
+              ElevatedButton(
+                onPressed: () => selectEndDate(context),
+                child: Text(
+                    endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!)),
+              ),
+            ],
+          ),
+          // StreamBuilder untuk menampilkan data pesanan
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('pesanan')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-          final pesananDocs = snapshot.data!.docs;
+                final pesananDocs = snapshot.data!.docs;
+                if (pesananDocs.isEmpty) {
+                  return Center(child: Text('Belum ada pesanan'));
+                }
 
-          if (pesananDocs.isEmpty) {
-            return Center(child: Text('Belum ada pesanan'));
-          }
+                // Menyaring pesanan berdasarkan nama pelanggan yang sesuai dengan pencarian
+                final filteredDocs = pesananDocs.where((doc) {
+                  final pesananData = doc.data() as Map<String, dynamic>;
+                  final customerName = pesananData['customerName'] ?? '';
+                  final timestamp = pesananData['timestamp']?.toDate();
+                  bool isInDateRange = true;
 
-          return ListView.builder(
-            itemCount: pesananDocs.length,
-            itemBuilder: (context, index) {
-              final pesananData = pesananDocs[index].data() as Map<String, dynamic>;
-              final customerName = pesananData['customerName'] ?? 'Tidak ada nama'; // Mengambil nama pelanggan
-              final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
-              final orderMenu = pesananData['orderDetails'] as List<dynamic>;
-              final totalCharge = pesananData['total'] ?? 0.0;
-              final orderId = pesananDocs[index].id; // Mendapatkan ID pesanan
+                  // Filter berdasarkan rentang tanggal
+                  if (startDate != null && timestamp != null) {
+                    isInDateRange = timestamp.isAfter(startDate!);
+                  }
+                  if (endDate != null && timestamp != null) {
+                    isInDateRange = isInDateRange && timestamp.isBefore(endDate!.add(Duration(days: 1)));
+                  }
 
-              // Format waktu dengan tanggal, jam dan menit
-              String formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
+                  return customerName.toLowerCase().contains(searchQuery) && isInDateRange; // Memeriksa kecocokan nama pelanggan
+                }).toList();
 
-              return Card(
-                elevation: 5,
-                margin: EdgeInsets.all(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Menampilkan nama pelanggan dan waktu dengan format tanggal, jam dan menit
-                      Text(
-                        '$customerName - Pesanan pada $formattedTime',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 10),
-                      // Menampilkan total harga
-                      Text(
-                        'Total: Rp ${totalCharge.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 10),
-                      // Tombol untuk melihat detail pesanan
-                      TextButton(
-                        onPressed: () {
-                          // Navigasi ke halaman detail pesanan
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DetailPesananScreen(orderId: orderId),
+                return ListView.builder(
+                  itemCount: filteredDocs.length,
+                  itemBuilder: (context, index) {
+                    final pesananData = filteredDocs[index].data() as Map<String, dynamic>;
+                    final customerName = pesananData['customerName'] ?? 'Tidak ada nama'; // Mengambil nama pelanggan
+                    final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
+                    final orderMenu = pesananData['orderDetails'] as List<dynamic>;
+                    final totalCharge = pesananData['total'] ?? 0.0;
+                    final orderId = filteredDocs[index].id; // Mendapatkan ID pesanan
+
+                    // Format waktu dengan tanggal, jam dan menit
+                    String formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
+
+                    return Card(
+                      elevation: 5,
+                      margin: EdgeInsets.all(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Menampilkan nama pelanggan dan waktu dengan format tanggal, jam dan menit
+                            Text(
+                              '$customerName - Pesanan pada $formattedTime',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
-                          );
-                        },
-                        child: Text('Lihat Detail Pesanan'),
-                      ),
-                      // Tombol Hapus Pesanan
-                      ElevatedButton(
-                        onPressed: () => deleteOrder(orderId, orderMenu),
-                        child: Text('Hapus Pesanan'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent, // Tombol merah untuk hapus
-                          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                          textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30), // Rounded corners
-                          ),
+                            SizedBox(height: 10),
+                            // Menampilkan total harga
+                            Text(
+                              'Total: Rp ${totalCharge.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 10),
+                            // Tombol untuk melihat detail pesanan
+                            TextButton(
+                              onPressed: () {
+                                // Navigasi ke halaman detail pesanan
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => DetailPesananScreen(orderId: orderId),
+                                  ),
+                                );
+                              },
+                              child: Text('Lihat Detail Pesanan'),
+                            ),
+                            // Tombol Hapus Pesanan
+                            ElevatedButton(
+                              onPressed: () => deleteOrder(orderId, orderMenu),
+                              child: Text('Hapus Pesanan'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent, // Tombol merah untuk hapus
+                                padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+                                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30), // Rounded corners
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
