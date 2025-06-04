@@ -41,21 +41,22 @@ class CetakNotaScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Center(
               child: Container(
-                padding: EdgeInsets.all(20),
+                width: 350, // Menyesuaikan lebar container agar lebih kecil dan elegan
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade300),
                   borderRadius: BorderRadius.circular(10),
                   color: Colors.white,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Logo Toko
                     Container(
                       alignment: Alignment.center,
                       child: Text(
                         'LOGO TOKO', 
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
                       ),
                     ),
                     SizedBox(height: 10),
@@ -63,7 +64,7 @@ class CetakNotaScreen extends StatelessWidget {
                     // Nama Toko dan Alamat
                     Text(
                       'Toko Berkat Jaya\nJl. Slamet Riady', 
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: 10),
@@ -72,20 +73,20 @@ class CetakNotaScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Tanggal: $currentDate', style: TextStyle(fontSize: 16, color: Colors.black)),
-                        Text('Waktu: $currentTime', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('Tanggal: $currentDate', style: TextStyle(fontSize: 14, color: Colors.black)),
+                        Text('Waktu: $currentTime', style: TextStyle(fontSize: 14, color: Colors.black)),
                       ],
                     ),
-                    SizedBox(height: 20),
+                    SizedBox(height: 15),
                     Divider(color: Colors.black),
                     SizedBox(height: 10),
 
                     // Nama Kasir
-                    Text('Kasir: Evy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text('Kasir: Evy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 10),
 
                     // Detail Pembelian
-                    Text('Detail Pembelian:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                    Text('Detail Pembelian:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
                     SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
@@ -96,8 +97,8 @@ class CetakNotaScreen extends StatelessWidget {
                       child: Column(
                         children: orderMenu.map((item) {
                           return ListTile(
-                            title: Text('${item['name']} (x${item['quantity']})', style: TextStyle(fontSize: 16, color: Colors.black)),
-                            subtitle: Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                            title: Text('${item['name']} (x${item['quantity']})', style: TextStyle(fontSize: 14, color: Colors.black)),
+                            subtitle: Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}', style: TextStyle(fontSize: 14, color: Colors.black)),
                           );
                         }).toList(),
                       ),
@@ -106,19 +107,19 @@ class CetakNotaScreen extends StatelessWidget {
                     Divider(color: Colors.black),
 
                     // Menampilkan Nama Pelanggan
-                    Text('Nama Pelanggan: $customerName', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text('Nama Pelanggan: $customerName', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 10),
 
                     // Total Harga dan Pengembalian
-                    Text('Total Harga: Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text('Total Harga: Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 10),
-                    Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
-                    SizedBox(height: 20),
+                    Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                    SizedBox(height: 15),
 
                     // Menampilkan metode pembayaran
-                    Text('Bayar dengan: $paymentMethod', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                    Text('Bayar dengan: $paymentMethod', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
 
-                    SizedBox(height: 30),
+                    SizedBox(height: 20),
 
                     // Tombol untuk kembali ke KasirScreen
                     Center(
@@ -126,10 +127,10 @@ class CetakNotaScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.pop(context); // Tombol untuk kembali
                         },
-                        child: Text('Kembali', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: Text('Kembali', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,  // Mengubah warna tombol menjadi hijau
-                          padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
+                          padding: EdgeInsets.symmetric(horizontal: 80, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30), // Rounded corners
                           ),

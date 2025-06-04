@@ -1,6 +1,8 @@
-import 'dart:convert'; 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'pembayaran_screen.dart';
 
 void main() {
@@ -23,6 +25,7 @@ class _KasirScreenState extends State<KasirScreen> {
   String searchQuery = ""; // Variabel untuk menyimpan kata pencarian
   bool isDropdownVisible = false; // Menyimpan status dropdown
   final List<Map<String, dynamic>> orderMenu = [];
+  String? selectedProductId; // Menyimpan ID produk yang dipilih dari grid order menu
 
   // Fungsi untuk menambah produk ke dalam order menu
   void addToOrder(String id, String name, double price, int stock) async {
@@ -190,267 +193,289 @@ class _KasirScreenState extends State<KasirScreen> {
         title: Text('Kasir App'),
         backgroundColor: Colors.deepPurpleAccent,
       ),
-      body: Row(
+      body: Stack(
         children: [
-          // Grid Produk di sebelah kiri
-          Expanded(
-            flex: 2,
-            child: Column(
-              children: [
-                // Kategori Buttons (All, Makanan, Minuman)
-                Container(
-                  padding: EdgeInsets.all(10),
-                  color: Colors.deepPurpleAccent,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start, // Tombol kiri
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedCategory = 'All';
-                            isDropdownVisible = !isDropdownVisible; // Toggle dropdown
-                          });
-                        },
-                        child: Row(
-                          children: [
+          // Menambahkan Background Blur tanpa menggunakan assets
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+              child: Container(
+                color: Colors.black.withOpacity(0.5), // Hanya memberikan warna hitam transparan
+              ),
+            ),
+          ),
+          // Konten lainnya di atas background
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,  // Ensures both grids are aligned left
+            children: [
+              Expanded(
+                flex: 2,
+                child: Column(
+                  children: [
+                    // Kategori dan tombol pencarian
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      color: Colors.deepPurpleAccent,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedCategory = 'All';
+                                isDropdownVisible = !isDropdownVisible;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                CategoryButton(
+                                  label: selectedCategory == 'All' ? 'All' : selectedCategory,
+                                  isSelected: selectedCategory == 'All',
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedCategory = 'All';
+                                      isDropdownVisible = !isDropdownVisible;
+                                    });
+                                  },
+                                ),
+                                Icon(
+                                  isDropdownVisible
+                                      ? Icons.arrow_drop_up
+                                      : Icons.arrow_drop_down,
+                                  size: 24,
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isDropdownVisible) ...[
                             CategoryButton(
-                              label: selectedCategory == 'All' ? 'All' : selectedCategory,
-                              isSelected: selectedCategory == 'All',
+                              label: 'Makanan',
+                              isSelected: selectedCategory == 'makanan',
                               onPressed: () {
                                 setState(() {
-                                  selectedCategory = 'All';
-                                  isDropdownVisible = !isDropdownVisible;
+                                  selectedCategory = 'makanan';
+                                  isDropdownVisible = false;
                                 });
                               },
                             ),
-                            Icon(
-                              isDropdownVisible
-                                  ? Icons.arrow_drop_up
-                                  : Icons.arrow_drop_down,
-                              size: 24,
+                            const SizedBox(width: 10),
+                            CategoryButton(
+                              label: 'Minuman',
+                              isSelected: selectedCategory == 'minuman',
+                              onPressed: () {
+                                setState(() {
+                                  selectedCategory = 'minuman';
+                                  isDropdownVisible = false;
+                                });
+                              },
+                            ),
+                          ],
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10),
+                              child: TextField(
+                                onChanged: (query) {
+                                  setState(() {
+                                    searchQuery = query;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  hintText: "Cari Produk...",
+                                  hintStyle: TextStyle(color: Colors.blueGrey),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: BorderSide(color: Colors.white, width: 2),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('produk')
+                            .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
+                            .orderBy('timestamp', descending: true)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          final docs = snapshot.data!.docs;
+                          if (docs.isEmpty) {
+                            return const Center(child: Text('Belum ada produk'));
+                          }
+
+                          final filteredDocs = docs.where((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final name = data['nama'] ?? '';
+                            return name.toLowerCase().contains(searchQuery.toLowerCase());
+                          }).toList();
+
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.4,
+                            ),
+                            itemCount: filteredDocs.length,
+                            itemBuilder: (context, index) {
+                              final doc = filteredDocs[index];
+                              final data = doc.data() as Map<String, dynamic>;
+                              final id = doc.id;
+                              final name = data['nama'] ?? '';
+                              final stock = data['stok'] ?? 0;
+                              final price = data['harga'] ?? 0.0;
+                              final base64Image = data['gambar'] ?? '';
+
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedProductId = id;  // Update product selection
+                                  });
+                                },
+                                child: Card(
+                                  elevation: 5,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white, // Highlight selected product
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      base64Image.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: Image.memory(
+                                                base64Decode(base64Image),
+                                                width: 50,
+                                                height: 50,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            )
+                                          : const Icon(Icons.fastfood, size: 50),
+                                      Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      Text('Stok: $stock', style: TextStyle(fontSize: 16)),
+                                      IconButton(
+                                        icon: Icon(Icons.add, size: 30, color: Colors.deepPurple),
+                                        onPressed: () {
+                                          addToOrder(id, name, price, stock);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Bagian untuk Grid Order Menu dengan latar belakang
+              Expanded(
+                flex: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8), // Menambahkan background transparan untuk Order Menu
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  padding: EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: orderMenu.length,
+                          itemBuilder: (context, index) {
+                            final item = orderMenu[index];
+                            return Card(
+                              elevation: 5,
+                              child: ListTile(
+                                title: Text('${item['name']} (x${item['quantity']})'),
+                                subtitle: Text('Rp ${item['price']}'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.edit, size: 20),
+                                      onPressed: () async {
+                                        final item = orderMenu[index];
+                                        final id = item['id'];
+                                        final name = item['name'];
+                                        final currentQuantity = item['quantity'];
+                                        final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+                                        final docSnapshot = await docRef.get();
+                                        if (docSnapshot.exists) {
+                                          final stock = docSnapshot.data()?['stok'] ?? 0;
+                                          editItemQuantity(id, name, item['price'], currentQuantity, stock);
+                                        }
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.remove, size: 20),
+                                      onPressed: () {
+                                        if (item['quantity'] > 1) {
+                                          removeOneItem(item['id'], item['price']);
+                                        }
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete, size: 20),
+                                      onPressed: () {
+                                        removeItemFromOrder(item['id'], item['quantity']);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Total: Rp ${totalCharge.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: ElevatedButton(
+                                onPressed: handlePayment,
+                                child: Text('Pembayaran'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurpleAccent,
+                                  padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
+                                  textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      if (isDropdownVisible) ...[
-                        CategoryButton(
-                          label: 'Makanan',
-                          isSelected: selectedCategory == 'makanan',
-                          onPressed: () {
-                            setState(() {
-                              selectedCategory = 'makanan';
-                              isDropdownVisible = false;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        CategoryButton(
-                          label: 'Minuman',
-                          isSelected: selectedCategory == 'minuman',
-                          onPressed: () {
-                            setState(() {
-                              selectedCategory = 'minuman';
-                              isDropdownVisible = false;
-                            });
-                          },
-                        ),
-                      ],
-                      // Menambahkan search bar untuk filter produk
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: TextField(
-                            onChanged: (query) {
-                              setState(() {
-                                searchQuery = query;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: "Cari Produk...",
-                              hintStyle: TextStyle(color: Colors.blueGrey),
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.white, width: 2),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
-                // Grid Produk berdasarkan kategori yang dipilih dan pencarian
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('produk')
-                        .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final docs = snapshot.data!.docs;
-                      if (docs.isEmpty) {
-                        return const Center(child: Text('Belum ada produk'));
-                      }
-
-                      final filteredDocs = docs.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final name = data['nama'] ?? '';
-                        return name.toLowerCase().contains(searchQuery.toLowerCase());
-                      }).toList();
-
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.4,
-                        ),
-                        itemCount: filteredDocs.length,
-                        itemBuilder: (context, index) {
-                          final doc = filteredDocs[index];
-                          final data = doc.data() as Map<String, dynamic>;
-                          final id = doc.id;
-                          final name = data['nama'] ?? '';
-                          final stock = data['stok'] ?? 0;
-                          final price = data['harga'] ?? 0.0;
-                          final base64Image = data['gambar'] ?? '';
-
-                          return Card(
-                            elevation: 5,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                base64Image.isNotEmpty
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.memory(
-                                          base64Decode(base64Image),
-                                          width: 50,
-                                          height: 50,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      )
-                                    : const Icon(Icons.fastfood, size: 50),
-                                Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                Text('Stok: $stock', style: TextStyle(fontSize: 16)),
-                                IconButton(
-                                  icon: Icon(Icons.add, size: 30, color: Colors.deepPurple),
-                                  onPressed: () {
-                                    addToOrder(id, name, price, stock);
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Order Menu di sebelah kanan
-          Expanded(
-            flex: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                ),
-
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: orderMenu.length,
-                    itemBuilder: (context, index) {
-                      final item = orderMenu[index];
-
-                      return Card(
-                        elevation: 5,
-                        child: ListTile(
-                          title: Text('${item['name']} (x${item['quantity']})'),
-                          subtitle: Text('Rp ${item['price']}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit, size: 20),
-                                onPressed: () async {
-                                  final item = orderMenu[index];
-                                  final id = item['id'];
-                                  final name = item['name'];
-                                  final currentQuantity = item['quantity'];
-                                  final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-                                  final docSnapshot = await docRef.get();
-                                  if (docSnapshot.exists) {
-                                    final stock = docSnapshot.data()?['stok'] ?? 0;
-                                    editItemQuantity(id, name, item['price'], currentQuantity, stock);
-                                  }
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.remove, size: 20),
-                                onPressed: () {
-                                  if (item['quantity'] > 1) {
-                                    removeOneItem(item['id'], item['price']);
-                                  }
-                                },
-                              ),
-                              
-                              IconButton(
-                                icon: Icon(Icons.delete, size: 20),
-                                onPressed: () {
-                                  removeItemFromOrder(item['id'], item['quantity']);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Total: Rp ${totalCharge.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: ElevatedButton(
-                          onPressed: handlePayment,
-                          child: Text('Pembayaran'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurpleAccent,
-                            padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
-                            textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
