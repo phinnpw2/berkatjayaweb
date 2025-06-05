@@ -44,6 +44,20 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     return amountPaid >= totalAmount;
   }
 
+  // Fungsi untuk memperbarui stok produk di Firestore
+  Future<void> updateStokProduk() async {
+    for (var item in widget.orderMenu) {
+      // Update stok di Firestore
+      var productRef = FirebaseFirestore.instance.collection('produk').doc(item['id']);
+      var currentProduct = await productRef.get();
+      
+      if (currentProduct.exists) {
+        int updatedStock = currentProduct['stok'] - item['quantity'];
+        await productRef.update({'stok': updatedStock});  // Update stok produk
+      }
+    }
+  }
+
   Future<void> saveTransaction() async {
     String customerName = customerNameController.text;
 
@@ -63,7 +77,33 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     transactions.add(json.encode(transaction)); // Menambahkan transaksi baru
     await prefs.setStringList('transactions', transactions);
 
+    // Menyimpan transaksi ke Firestore
+    await FirebaseFirestore.instance.collection('riwayat_transaksi').add(transaction);
+
+    // Update stok produk setelah transaksi selesai
+    await updateStokProduk();
+
+    // Mengosongkan orderMenu setelah transaksi selesai
+    setState(() {
+      widget.orderMenu.clear(); // Menghapus semua produk yang sudah dipesan
+    });
+
+    // Tampilkan pesan transaksi berhasil
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi selesai!')));
+
+    // Pindah ke halaman cetak nota
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CetakNotaScreen( // Navigasi ke halaman CetakNota
+          orderMenu: widget.orderMenu,
+          totalAmount: totalAmount,
+          change: change,
+          paymentMethod: paymentMethod,
+          customerName: customerNameController.text,
+        ),
+      ),
+    );
   }
 
   @override
@@ -183,19 +223,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                             else if (!isAmountPaidValid()) {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang tidak cukup')));
                             } else {
-                              saveTransaction(); // Simpan transaksi
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CetakNotaScreen( // Navigasi ke halaman CetakNota
-                                    orderMenu: widget.orderMenu,
-                                    totalAmount: totalAmount,
-                                    change: change,
-                                    paymentMethod: paymentMethod,
-                                    customerName: customerNameController.text,
-                                  ),
-                                ),
-                              );
+                              saveTransaction(); // Simpan transaksi dan update stok produk
                             }
                           },
                           child: Text('Nota'),

@@ -27,6 +27,21 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     });
   }
 
+  // Fungsi untuk menghapus riwayat transaksi tertentu
+  Future<void> deleteTransaction(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
+    
+    // Menghapus transaksi yang dipilih
+    transactionStrings.removeAt(index);
+    await prefs.setStringList('transactions', transactionStrings);
+
+    // Memuat ulang transaksi
+    loadTransactions();
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil dihapus')));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,7 +59,34 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                   child: ListTile(
                     title: Text('Pelanggan: ${transaction['customerName']}'),
                     subtitle: Text('Tanggal: ${transaction['date']}'),
-                    trailing: Icon(Icons.history),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        // Tampilkan dialog konfirmasi sebelum menghapus transaksi
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Hapus Transaksi'),
+                            content: Text('Apakah Anda yakin ingin menghapus transaksi ini?'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Menutup dialog jika batal
+                                },
+                                child: Text('Batal'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context); // Menutup dialog
+                                  deleteTransaction(index); // Menghapus transaksi yang dipilih
+                                },
+                                child: Text('Hapus'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                     onTap: () {
                       // Tampilkan detail transaksi
                       showDialog(

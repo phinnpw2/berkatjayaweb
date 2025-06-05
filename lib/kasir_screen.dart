@@ -187,6 +187,13 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
+  // Fungsi untuk memulai transaksi baru dengan orderMenu yang kosong
+  void startNewTransaction() {
+    setState(() {
+      orderMenu.clear(); // Mengosongkan orderMenu
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -404,16 +411,22 @@ class _KasirScreenState extends State<KasirScreen> {
                   child: Column(
                     children: [
                       Padding(
-  padding: const EdgeInsets.all(8.0),
-  child: Align(
-    alignment: Alignment.centerLeft,  // Mengatur teks agar berada di sebelah kiri
-    child: Text(
-      'Order Menu',
-      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-    ),
-  ),
-),
-
+                        padding: EdgeInsets.only(top: 10, left: 20),
+                        child: Row(
+                          children: [
+                            Text("Order Menu", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            Spacer(),
+                            IconButton(
+                              icon: Icon(Icons.history, size: 30),
+                              onPressed: () { 
+                                Navigator.push(context,
+                                MaterialPageRoute(builder: (context) => RiwayatTransaksiScreen()),
+                                );
+                              },
+                            ),
+                          ],
+                         ),
+                      ),
                       Expanded(
                         child: ListView.builder(
                           itemCount: orderMenu.length,

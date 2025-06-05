@@ -1,3 +1,4 @@
+import 'package:berkatjaya_web/kasir_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl package
 
@@ -106,6 +107,7 @@ class CetakNotaScreen extends StatelessWidget {
                     SizedBox(height: 10),
                     Divider(color: Colors.black),
 
+
                     // Menampilkan Nama Pelanggan
                     Text('Nama Pelanggan: $customerName', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 10),
@@ -121,13 +123,18 @@ class CetakNotaScreen extends StatelessWidget {
 
                     SizedBox(height: 20),
 
-                    // Tombol untuk kembali ke KasirScreen
+                    // Tombol untuk transaksi baru
                     Center(
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(context); // Tombol untuk kembali
+                          // Arahkan ke KasirScreen untuk transaksi baru, clear history
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => KasirScreen()), // KasirScreen sebagai transaksi baru
+                            (Route<dynamic> route) => false, // Menghapus semua halaman di stack
+                          );
                         },
-                        child: Text('Kembali', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        child: Text('Transaksi Baru', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,  // Mengubah warna tombol menjadi hijau
                           padding: EdgeInsets.symmetric(horizontal: 80, vertical: 12),
