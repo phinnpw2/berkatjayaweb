@@ -1,9 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:ui'; 
 import 'package:berkatjaya_web/cetaknota_screen.dart';
-import 'dart:ui'; // Pastikan Anda mengimpor dart:ui untuk ImageFilter
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; 
+import 'package:shared_preferences/shared_preferences.dart'; // SharedPreferences untuk menyimpan data
 
 class PembayaranScreen extends StatefulWidget {
   final List<Map<String, dynamic>> orderMenu;
+
   PembayaranScreen({required this.orderMenu});
 
   @override
@@ -39,33 +44,52 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     return amountPaid >= totalAmount;
   }
 
+  Future<void> saveTransaction() async {
+    String customerName = customerNameController.text;
+
+    // Membuat objek transaksi
+    Map<String, dynamic> transaction = {
+      'customerName': customerName,
+      'orderDetails': widget.orderMenu,
+      'totalAmount': totalAmount,
+      'paymentMethod': paymentMethod,
+      'change': change,
+      'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+    };
+
+    // Menyimpan transaksi ke SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    List<String> transactions = prefs.getStringList('transactions') ?? [];
+    transactions.add(json.encode(transaction)); // Menambahkan transaksi baru
+    await prefs.setStringList('transactions', transactions);
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi selesai!')));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Pembayaran'),
         backgroundColor: Colors.deepPurpleAccent,
-        elevation: 5,
       ),
       body: Stack(
         children: [
-          // Background blur effect
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
               child: Container(
-                color: Colors.black.withOpacity(0.5), // Apply transparency
+                color: Colors.black.withOpacity(0.5),
               ),
             ),
           ),
-          // Centered grid container for payment information
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Container(
-                width: 450, // Meningkatkan ukuran container agar lebih besar
+                width: 450,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9), // Slight transparency for the grid background
+                  color: Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -81,13 +105,8 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Pembayaran',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent),
-                      ),
+                      Text('Pembayaran', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
                       SizedBox(height: 20),
-
-                      // Input untuk Nama Pelanggan
                       TextField(
                         controller: customerNameController,
                         decoration: InputDecoration(
@@ -97,14 +116,9 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                           filled: true,
                           fillColor: Colors.grey.shade100,
                         ),
-                        onChanged: (text) {
-                          setState(() {});
-                        },
                       ),
                       SizedBox(height: 20),
-
-                      // Rincian produk yang dipesan
-                      Text('Rincian Produk:', style: TextStyle(fontSize: 18, color: Colors.black)),
+                      Text('Rincian Produk:', style: TextStyle(fontSize: 18)),
                       SizedBox(height: 10),
                       Container(
                         decoration: BoxDecoration(
@@ -115,15 +129,13 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                         child: Column(
                           children: widget.orderMenu.map((item) {
                             return ListTile(
-                              title: Text('${item['name']} (x${item['quantity']})', style: TextStyle(fontSize: 16, color: Colors.black)),
-                              subtitle: Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                              title: Text('${item['name']} (x${item['quantity']})'),
+                              subtitle: Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}'),
                             );
                           }).toList(),
                         ),
                       ),
                       SizedBox(height: 20),
-
-                      // Input nominal uang yang dibayar
                       TextField(
                         controller: amountPaidController,
                         keyboardType: TextInputType.number,
@@ -139,21 +151,13 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                         },
                       ),
                       SizedBox(height: 20),
-
-                      // Menampilkan total harga di atas pengembalian
-                      Text('Total yang harus dibayar:', style: TextStyle(fontSize: 18, color: Colors.black)),
+                      Text('Total yang harus dibayar:', style: TextStyle(fontSize: 18)),
                       SizedBox(height: 5),
-                      Text('Rp ${totalAmount.toStringAsFixed(2)}',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                      Text('Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
                       SizedBox(height: 20),
-
-                      // Menampilkan pengembalian
-                      Text('Pengembalian: Rp ${change.toStringAsFixed(2)}',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                      Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
                       SizedBox(height: 20),
-
-                      // Menampilkan metode pembayaran
-                      Text('Pembayaran:', style: TextStyle(fontSize: 18, color: Colors.black)),
+                      Text('Pembayaran:', style: TextStyle(fontSize: 18)),
                       DropdownButton<String>(
                         value: paymentMethod,
                         onChanged: (String? newValue) {
@@ -170,8 +174,6 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                         }).toList(),
                       ),
                       SizedBox(height: 20),
-
-                      // Tombol Nota
                       Center(
                         child: ElevatedButton(
                           onPressed: () {
@@ -181,10 +183,11 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                             else if (!isAmountPaidValid()) {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang tidak cukup')));
                             } else {
+                              saveTransaction(); // Simpan transaksi
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => CetakNotaScreen(
+                                  builder: (context) => CetakNotaScreen( // Navigasi ke halaman CetakNota
                                     orderMenu: widget.orderMenu,
                                     totalAmount: totalAmount,
                                     change: change,

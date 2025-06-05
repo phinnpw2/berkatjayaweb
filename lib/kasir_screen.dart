@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'pembayaran_screen.dart';
+import 'riwayattransaksi_screen.dart'; // Pastikan file ini sudah ada
 
 void main() {
   runApp(MaterialApp(
@@ -192,10 +193,21 @@ class _KasirScreenState extends State<KasirScreen> {
       appBar: AppBar(
         title: Text('Kasir App'),
         backgroundColor: Colors.deepPurpleAccent,
+        actions: [
+          // Tombol Riwayat Transaksi
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RiwayatTransaksiScreen()), // Arahkan ke Riwayat Transaksi
+              );
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
-          // Menambahkan Background Blur tanpa menggunakan assets
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
@@ -204,20 +216,17 @@ class _KasirScreenState extends State<KasirScreen> {
               ),
             ),
           ),
-          // Konten lainnya di atas background
           Row(
-            mainAxisAlignment: MainAxisAlignment.start,  // Ensures both grids are aligned left
             children: [
+              // Grid Produk di sebelah kiri
               Expanded(
                 flex: 2,
                 child: Column(
                   children: [
-                    // Kategori dan tombol pencarian
                     Container(
                       padding: EdgeInsets.all(10),
                       color: Colors.deepPurpleAccent,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           GestureDetector(
                             onTap: () {
@@ -340,7 +349,7 @@ class _KasirScreenState extends State<KasirScreen> {
                               return GestureDetector(
                                 onTap: () {
                                   setState(() {
-                                    selectedProductId = id;  // Update product selection
+                                    selectedProductId = id; 
                                   });
                                 },
                                 child: Card(
@@ -348,7 +357,7 @@ class _KasirScreenState extends State<KasirScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
-                                  color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white, // Highlight selected product
+                                  color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white, 
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -383,22 +392,28 @@ class _KasirScreenState extends State<KasirScreen> {
                   ],
                 ),
               ),
-              // Bagian untuk Grid Order Menu dengan latar belakang
+              // Grid Riwayat Transaksi tetap berada di kanan
               Expanded(
                 flex: 1,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8), // Menambahkan background transparan untuk Order Menu
+                    color: Colors.white.withOpacity(0.8), 
                     borderRadius: BorderRadius.circular(15),
                   ),
                   padding: EdgeInsets.all(8),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text('Order Menu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      ),
+  padding: const EdgeInsets.all(8.0),
+  child: Align(
+    alignment: Alignment.centerLeft,  // Mengatur teks agar berada di sebelah kiri
+    child: Text(
+      'Order Menu',
+      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    ),
+  ),
+),
+
                       Expanded(
                         child: ListView.builder(
                           itemCount: orderMenu.length,
