@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'pembayaran_screen.dart';
-import 'riwayattransaksi_screen.dart'; // Pastikan file ini sudah ada
+import 'riwayattransaksi_screen.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -22,13 +22,12 @@ class KasirScreen extends StatefulWidget {
 }
 
 class _KasirScreenState extends State<KasirScreen> {
-  String selectedCategory = "All"; // Default kategori All, menampilkan semua produk
-  String searchQuery = ""; // Variabel untuk menyimpan kata pencarian
-  bool isDropdownVisible = false; // Menyimpan status dropdown
+  String selectedCategory = "All";
+  String searchQuery = "";
+  bool isDropdownVisible = false;
   final List<Map<String, dynamic>> orderMenu = [];
-  String? selectedProductId; // Menyimpan ID produk yang dipilih dari grid order menu
+  String? selectedProductId;
 
-  // Fungsi untuk menambah produk ke dalam order menu
   void addToOrder(String id, String name, double price, int stock) async {
     if (stock > 0) {
       setState(() {
@@ -45,7 +44,6 @@ class _KasirScreenState extends State<KasirScreen> {
         }
       });
 
-      // Update stok di Firestore
       final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
       final docSnapshot = await docRef.get();
       if (docSnapshot.exists) {
@@ -59,7 +57,6 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
-  // Fungsi untuk mengurangi produk dalam order menu
   void removeOneItem(String id, double price) async {
     setState(() {
       for (var item in orderMenu) {
@@ -70,7 +67,6 @@ class _KasirScreenState extends State<KasirScreen> {
       }
     });
 
-    // Update stok di Firestore
     final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
     final docSnapshot = await docRef.get();
     if (docSnapshot.exists) {
@@ -79,13 +75,11 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
-  // Fungsi untuk menghapus produk dari order menu
   void removeItemFromOrder(String id, int quantity) async {
     setState(() {
       orderMenu.removeWhere((item) => item['id'] == id);
     });
 
-    // Update stok di Firestore
     final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
     final docSnapshot = await docRef.get();
     if (docSnapshot.exists) {
@@ -94,7 +88,6 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
-  // Menghitung total harga dari produk yang ada di order menu
   double get totalCharge {
     double total = 0;
     for (var item in orderMenu) {
@@ -103,11 +96,10 @@ class _KasirScreenState extends State<KasirScreen> {
     return total;
   }
 
-  // Fungsi untuk mengedit jumlah produk dalam order menu
   void editItemQuantity(String id, String name, double price, int currentQuantity, int stock) async {
-    int availableStock = stock + currentQuantity; // Stok yang tersedia adalah stok saat ini ditambah dengan jumlah yang sudah ada di order menu
+    int availableStock = stock + currentQuantity; 
 
-    int newQuantity = currentQuantity; // Inisialisasi jumlah produk saat ini
+    int newQuantity = currentQuantity; 
     TextEditingController quantityController = TextEditingController(text: currentQuantity.toString());
 
     showDialog(
@@ -124,7 +116,7 @@ class _KasirScreenState extends State<KasirScreen> {
                 decoration: InputDecoration(labelText: 'Jumlah'),
               ),
               SizedBox(height: 10),
-              Text('Stok tersedia: $availableStock'), // Menampilkan stok yang tersedia
+              Text('Stok tersedia: $availableStock'),
             ],
           ),
           actions: [
@@ -141,14 +133,13 @@ class _KasirScreenState extends State<KasirScreen> {
                     }
                   });
 
-                  // Update stok di Firestore
                   final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
                   try {
                     final docSnapshot = await docRef.get();
                     if (docSnapshot.exists) {
                       final currentStock = docSnapshot.data()?['stok'] ?? 0;
                       await docRef.update({'stok': currentStock - (updatedQuantity - currentQuantity)});
-                      Navigator.of(context).pop();  // Menutup dialog setelah update
+                      Navigator.of(context).pop();
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Produk tidak ditemukan!')));
                     }
@@ -173,7 +164,6 @@ class _KasirScreenState extends State<KasirScreen> {
     );
   }
 
-  // Fungsi untuk memeriksa apakah ada produk di order menu sebelum melakukan pembayaran
   void handlePayment() {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
@@ -187,10 +177,9 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
-  // Fungsi untuk memulai transaksi baru dengan orderMenu yang kosong
   void startNewTransaction() {
     setState(() {
-      orderMenu.clear(); // Mengosongkan orderMenu
+      orderMenu.clear();
     });
   }
 
@@ -198,20 +187,18 @@ class _KasirScreenState extends State<KasirScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Kasir App'),
-        backgroundColor: Colors.deepPurpleAccent,
-        actions: [
-          // Tombol Riwayat Transaksi
-          IconButton(
-            icon: Icon(Icons.history),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => RiwayatTransaksiScreen()), // Arahkan ke Riwayat Transaksi
-              );
-            },
+        title: Text('Kasir App', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent, 
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blueAccent, Colors.pinkAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-        ],
+        ),
       ),
       body: Stack(
         children: [
@@ -219,20 +206,19 @@ class _KasirScreenState extends State<KasirScreen> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
               child: Container(
-                color: Colors.black.withOpacity(0.5), // Hanya memberikan warna hitam transparan
+                color: Colors.black.withOpacity(0.5),
               ),
             ),
           ),
           Row(
             children: [
-              // Grid Produk di sebelah kiri
               Expanded(
                 flex: 2,
                 child: Column(
                   children: [
                     Container(
                       padding: EdgeInsets.all(10),
-                      color: Colors.deepPurpleAccent,
+                      color: Colors.transparent,
                       child: Row(
                         children: [
                           GestureDetector(
@@ -399,7 +385,6 @@ class _KasirScreenState extends State<KasirScreen> {
                   ],
                 ),
               ),
-              // Grid Riwayat Transaksi tetap berada di kanan
               Expanded(
                 flex: 1,
                 child: Container(
@@ -525,14 +510,14 @@ class CategoryButton extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.yellow : Colors.white,
+          color: isSelected ? Colors.white : Colors.white,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: Colors.deepPurpleAccent),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.deepPurpleAccent : Colors.black,
+            color: isSelected ? Colors.black : Colors.black,
             fontWeight: FontWeight.bold,
           ),
         ),

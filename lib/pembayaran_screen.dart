@@ -1,10 +1,9 @@
-import 'dart:convert';
-import 'dart:ui'; 
-import 'package:berkatjaya_web/cetaknota_screen.dart';
+import 'dart:convert'; // Menambahkan impor untuk json.decode
+import 'dart:ui'; // Menambahkan impor untuk ImageFilter
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; 
-import 'package:shared_preferences/shared_preferences.dart'; // SharedPreferences untuk menyimpan data
+import 'package:shared_preferences/shared_preferences.dart'; // SharedPreferences untuk menyimpan data riwayat transaksi
+import 'package:intl/intl.dart';
+import 'package:berkatjaya_web/cetaknota_screen.dart';
 
 class PembayaranScreen extends StatefulWidget {
   final List<Map<String, dynamic>> orderMenu;
@@ -44,66 +43,24 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     return amountPaid >= totalAmount;
   }
 
-  // Fungsi untuk memperbarui stok produk di Firestore
-  Future<void> updateStokProduk() async {
-    for (var item in widget.orderMenu) {
-      // Update stok di Firestore
-      var productRef = FirebaseFirestore.instance.collection('produk').doc(item['id']);
-      var currentProduct = await productRef.get();
-      
-      if (currentProduct.exists) {
-        int updatedStock = currentProduct['stok'] - item['quantity'];
-        await productRef.update({'stok': updatedStock});  // Update stok produk
-      }
-    }
-  }
-
-  Future<void> saveTransaction() async {
-    String customerName = customerNameController.text;
-
+  // Fungsi untuk menyimpan transaksi ke SharedPreferences
+  Future<void> saveTransactionToSharedPreferences() async {
     // Membuat objek transaksi
     Map<String, dynamic> transaction = {
-      'customerName': customerName,
+      'customerName': customerNameController.text,
       'orderDetails': widget.orderMenu,
       'totalAmount': totalAmount,
       'paymentMethod': paymentMethod,
       'change': change,
+      'status_transaksi': 'selesai', // Status transaksi selesai
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
     };
 
     // Menyimpan transaksi ke SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    List<String> transactions = prefs.getStringList('transactions') ?? [];
-    transactions.add(json.encode(transaction)); // Menambahkan transaksi baru
-    await prefs.setStringList('transactions', transactions);
-
-    // Menyimpan transaksi ke Firestore
-    await FirebaseFirestore.instance.collection('riwayat_transaksi').add(transaction);
-
-    // Update stok produk setelah transaksi selesai
-    await updateStokProduk();
-
-    // Mengosongkan orderMenu setelah transaksi selesai
-    setState(() {
-      widget.orderMenu.clear(); // Menghapus semua produk yang sudah dipesan
-    });
-
-    // Tampilkan pesan transaksi berhasil
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi selesai!')));
-
-    // Pindah ke halaman cetak nota
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CetakNotaScreen( // Navigasi ke halaman CetakNota
-          orderMenu: widget.orderMenu,
-          totalAmount: totalAmount,
-          change: change,
-          paymentMethod: paymentMethod,
-          customerName: customerNameController.text,
-        ),
-      ),
-    );
+    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
+    transactionStrings.add(json.encode(transaction)); // Menambahkan transaksi ke dalam list
+    await prefs.setStringList('transactions', transactionStrings);
   }
 
   @override
@@ -219,11 +176,27 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                           onPressed: () {
                             if (amountPaidController.text.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Masukkan nominal uang terlebih dahulu')));
-                            }
-                            else if (!isAmountPaidValid()) {
+                            } else if (!isAmountPaidValid()) {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang tidak cukup')));
                             } else {
-                              saveTransaction(); // Simpan transaksi dan update stok produk
+                              // Menyimpan transaksi ke SharedPreferences dan menampilkan notifikasi
+                              saveTransactionToSharedPreferences().then((_) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pembayaran Berhasil!')));
+                              });
+
+                              // Pindah ke halaman cetak nota tanpa menyimpan transaksi di PembayaranScreen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CetakNotaScreen(
+                                    orderMenu: widget.orderMenu, 
+                                    totalAmount: totalAmount,
+                                    change: change,
+                                    paymentMethod: paymentMethod,
+                                    customerName: customerNameController.text,
+                                  ),
+                                ),
+                              );
                             }
                           },
                           child: Text('Nota'),
