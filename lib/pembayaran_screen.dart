@@ -1,7 +1,7 @@
-import 'dart:convert'; // Menambahkan impor untuk json.decode
-import 'dart:ui'; // Menambahkan impor untuk ImageFilter
+import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // SharedPreferences untuk menyimpan data riwayat transaksi
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:berkatjaya_web/cetaknota_screen.dart';
 
@@ -43,23 +43,20 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     return amountPaid >= totalAmount;
   }
 
-  // Fungsi untuk menyimpan transaksi ke SharedPreferences
   Future<void> saveTransactionToSharedPreferences() async {
-    // Membuat objek transaksi
     Map<String, dynamic> transaction = {
       'customerName': customerNameController.text,
       'orderDetails': widget.orderMenu,
       'totalAmount': totalAmount,
       'paymentMethod': paymentMethod,
       'change': change,
-      'status_transaksi': 'selesai', // Status transaksi selesai
+      'status_transaksi': 'selesai',
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
     };
 
-    // Menyimpan transaksi ke SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-    transactionStrings.add(json.encode(transaction)); // Menambahkan transaksi ke dalam list
+    transactionStrings.add(json.encode(transaction)); 
     await prefs.setStringList('transactions', transactionStrings);
   }
 
@@ -67,8 +64,25 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pembayaran'),
-        backgroundColor: Colors.deepPurpleAccent,
+        title: ShaderMask(
+          shaderCallback: (bounds) => LinearGradient(
+            colors: [Colors.blue, Colors.purple],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(bounds),
+          child: Text('Pembayaran', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blueAccent, Colors.pinkAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -102,7 +116,14 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Pembayaran', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [Colors.red, Colors.yellow],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ).createShader(bounds),
+                        child: Text('Pembayaran', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ),
                       SizedBox(height: 20),
                       TextField(
                         controller: customerNameController,
@@ -121,7 +142,11 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey.shade300),
                           borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey.shade100,
+                          gradient: LinearGradient(
+                            colors: [Colors.white24, Colors.white10],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                         ),
                         child: Column(
                           children: widget.orderMenu.map((item) {
@@ -150,9 +175,16 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                       SizedBox(height: 20),
                       Text('Total yang harus dibayar:', style: TextStyle(fontSize: 18)),
                       SizedBox(height: 5),
-                      Text('Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [Colors.green, Colors.yellow],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ).createShader(bounds),
+                        child: Text('Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                      ),
                       SizedBox(height: 20),
-                      Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                      Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
                       SizedBox(height: 20),
                       Text('Pembayaran:', style: TextStyle(fontSize: 18)),
                       DropdownButton<String>(
@@ -179,12 +211,10 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                             } else if (!isAmountPaidValid()) {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang tidak cukup')));
                             } else {
-                              // Menyimpan transaksi ke SharedPreferences dan menampilkan notifikasi
                               saveTransactionToSharedPreferences().then((_) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pembayaran Berhasil!')));
                               });
 
-                              // Pindah ke halaman cetak nota tanpa menyimpan transaksi di PembayaranScreen
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -201,7 +231,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                           },
                           child: Text('Nota'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurpleAccent,
+                            backgroundColor: Colors.white12,
                             padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
                             textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             shape: RoundedRectangleBorder(
