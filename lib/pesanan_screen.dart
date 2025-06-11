@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl untuk format tanggal
-import 'package:berkatjaya_web/detailpesanan_screen.dart'; // Pastikan file ini ada dan sesuai
+import 'package:berkatjaya_web/cetaknota_screen.dart'; // Mengimpor CetakNotaScreen
+import 'package:berkatjaya_web/statusnotatempo_screen.dart'; // Mengimpor StatusNotaTempoScreen
 
 class PesananScreen extends StatefulWidget {
   @override
@@ -20,8 +21,8 @@ class _PesananScreenState extends State<PesananScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      fieldLabelText: 'Pilih Tanggal Mulai', // Ganti label dengan Bahasa Indonesia
-      initialDatePickerMode: DatePickerMode.day, // Memulai dengan mode hari
+      fieldLabelText: 'Pilih Tanggal Mulai',
+      initialDatePickerMode: DatePickerMode.day,
     );
     if (picked != null && picked != startDate) {
       setState(() {
@@ -37,8 +38,8 @@ class _PesananScreenState extends State<PesananScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      fieldLabelText: 'Pilih Tanggal Akhir', // Ganti label dengan Bahasa Indonesia
-      initialDatePickerMode: DatePickerMode.day, // Memulai dengan mode hari
+      fieldLabelText: 'Pilih Tanggal Akhir',
+      initialDatePickerMode: DatePickerMode.day,
     );
     if (picked != null && picked != endDate) {
       setState(() {
@@ -64,6 +65,7 @@ class _PesananScreenState extends State<PesananScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil dihapus dan stok dikembalikan')));
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus pesanan: $e')));
     }
@@ -96,25 +98,20 @@ class _PesananScreenState extends State<PesananScreen> {
               ),
             ),
           ),
-          // Pilih Tanggal Mulai
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
                 onPressed: () => selectStartDate(context),
-                child: Text(
-                    startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!)), // Format tanggal Indonesia
+                child: Text(startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!)),
               ),
               SizedBox(width: 10),
-              // Pilih Tanggal Akhir
               ElevatedButton(
                 onPressed: () => selectEndDate(context),
-                child: Text(
-                    endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!)), // Format tanggal Indonesia
+                child: Text(endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!)),
               ),
             ],
           ),
-          // StreamBuilder untuk menampilkan data pesanan
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -131,14 +128,12 @@ class _PesananScreenState extends State<PesananScreen> {
                   return Center(child: Text('Belum ada pesanan'));
                 }
 
-                // Menyaring pesanan berdasarkan nama pelanggan yang sesuai dengan pencarian
                 final filteredDocs = pesananDocs.where((doc) {
                   final pesananData = doc.data() as Map<String, dynamic>;
                   final customerName = pesananData['customerName'] ?? '';
                   final timestamp = pesananData['timestamp']?.toDate();
                   bool isInDateRange = true;
 
-                  // Filter berdasarkan rentang tanggal
                   if (startDate != null && timestamp != null) {
                     isInDateRange = timestamp.isAfter(startDate!);
                   }
@@ -146,64 +141,147 @@ class _PesananScreenState extends State<PesananScreen> {
                     isInDateRange = isInDateRange && timestamp.isBefore(endDate!.add(Duration(days: 1)));
                   }
 
-                  return customerName.toLowerCase().contains(searchQuery) && isInDateRange; // Memeriksa kecocokan nama pelanggan
+                  return customerName.toLowerCase().contains(searchQuery) && isInDateRange;
                 }).toList();
 
                 return ListView.builder(
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
                     final pesananData = filteredDocs[index].data() as Map<String, dynamic>;
-                    final customerName = pesananData['customerName'] ?? 'Tidak ada nama'; // Mengambil nama pelanggan
-                    final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
+                    final customerName = pesananData['customerName'] ?? 'Tidak ada nama';
                     final orderMenu = pesananData['orderDetails'] as List<dynamic>;
-                    final totalCharge = pesananData['total'] ?? 0.0;
-                    final orderId = filteredDocs[index].id; // Mendapatkan ID pesanan
+                    final orderId = filteredDocs[index].id;
+                    final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
+                    final formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
 
-                    // Format waktu dengan tanggal, jam dan menit
-                    String formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
-
-                    return Card(
-                      elevation: 5,
-                      margin: EdgeInsets.all(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$customerName - Pesanan pada $formattedTime',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 10),
-                            Text(
-                              'Total: Rp ${totalCharge.toStringAsFixed(2)}',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 10),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => DetailPesananScreen(orderId: orderId),
-                                  ),
-                                );
-                              },
-                              child: Text('Lihat Detail Pesanan'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => deleteOrder(orderId, orderMenu),
-                              child: Text('Hapus Pesanan'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
+                    return GestureDetector(
+                      onTap: () {
+                        // Menampilkan rincian produk ketika grid diklik
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Rincian Produk'),
+                            content: Container(
+                              height: 250, // Batas tinggi kotak kecil
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Pelanggan: $customerName'),
+                                    SizedBox(height: 10),
+                                    Text('Rincian Produk:'),  // Menampilkan rincian produk
+                                    SizedBox(height: 10),
+                                    Column(
+                                      children: List.generate(orderMenu.length, (i) {
+                                        var product = orderMenu[i];
+                                        double totalPrice = product['price'] * product['quantity'];
+                                        return Card(
+                                          margin: EdgeInsets.only(bottom: 10),
+                                          elevation: 5,
+                                          color: Colors.grey.shade300,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(product['name'], style: TextStyle(fontWeight: FontWeight.bold)),
+                                                SizedBox(height: 5),
+                                                Text('Jumlah: ${product['quantity']}'),
+                                                Text('Harga per Unit: Rp ${product['price']}'),
+                                                Text('Total: Rp ${totalPrice}'),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: Text('Tutup'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Card(
+                        elevation: 5,
+                        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        color: Colors.grey.shade300,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('$customerName - Pesanan pada $formattedTime', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              SizedBox(height: 10),
+                              Text('Total: Rp ${(pesananData['total'] ?? 0.0).toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: Colors.green)),
+                              SizedBox(height: 10),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  // Pastikan nilai totalAmount, change, dan paymentMethod tidak null
+                                  double totalAmount = pesananData['total'] ?? 0.0;
+                                  double change = pesananData['change'] ?? 0.0;
+                                  String paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
+
+                                  List<Map<String, dynamic>> formattedOrderMenu = List<Map<String, dynamic>>.from(orderMenu);
+
+                                  // Update status pesanan menjadi "Belum Lunas"
+                                  await FirebaseFirestore.instance.collection('pesanan').doc(orderId).update({
+                                    'status': 'Belum Lunas',
+                                  });
+
+                                  // Menghapus pesanan dari koleksi pesanan
+                                  await FirebaseFirestore.instance.collection('pesanan').doc(orderId).delete();
+
+                                  // Menyimpan pesanan ke StatusNotaTempo
+                                  await FirebaseFirestore.instance.collection('statusnotatempo').add({
+                                    'customerName': customerName,
+                                    'orderDetails': formattedOrderMenu,
+                                    'total': totalAmount,
+                                    'change': change,
+                                    'paymentMethod': paymentMethod,
+                                    'status': 'Belum Lunas',  // Menambahkan status
+                                  });
+
+                                  // Navigasi ke CetakNotaScreen dengan data yang sesuai
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => CetakNotaScreen(
+                                        customerName: customerName,
+                                        orderMenu: formattedOrderMenu,
+                                        totalAmount: totalAmount,
+                                        change: change,
+                                        paymentMethod: paymentMethod,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text('Cetak Nota'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent, 
+                                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => deleteOrder(orderId, orderMenu),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -213,62 +291,6 @@ class _PesananScreenState extends State<PesananScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pop(context); // Kembali ke layar kasir
-        },
-        child: Icon(Icons.arrow_back),
-        backgroundColor: Colors.deepPurpleAccent,
-      ),
-    );
-  }
-}
-
-class DetailPesananScreen extends StatelessWidget {
-  final String orderId;
-
-  DetailPesananScreen({required this.orderId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Detail Pesanan'),
-        backgroundColor: Colors.deepPurpleAccent,
-      ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('pesanan').doc(orderId).snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          final pesananData = snapshot.data!.data() as Map<String, dynamic>;
-          final orderMenu = pesananData['orderDetails'] as List<dynamic>;
-          final totalCharge = pesananData['total'] ?? 0.0;
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: orderMenu.length,
-                  itemBuilder: (context, index) {
-                    final item = orderMenu[index];
-                    return ListTile(
-                      title: Text('${item['name']} (x${item['quantity']})'),
-                      subtitle: Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}'),
-                    );
-                  },
-                ),
-              ),
-              Text(
-                'Total: Rp ${totalCharge.toStringAsFixed(2)}',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

@@ -236,7 +236,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Nota Tempo App'),
-        backgroundColor: Colors.deepPurpleAccent,
+        backgroundColor: Colors.lightBlue,
         actions: [
           IconButton(
             icon: Icon(Icons.history),
@@ -269,7 +269,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                   children: [
                     Container(
                       padding: EdgeInsets.all(10),
-                      color: Colors.deepPurpleAccent,
+                      color: Colors.transparent,
                       child: Row(
                         children: [
                           GestureDetector(
@@ -565,14 +565,14 @@ class CategoryButton extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.yellow : Colors.white,
+          color: isSelected ? Colors.white : Colors.white,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: Colors.deepPurpleAccent),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.deepPurpleAccent : Colors.black,
+            color: isSelected ? Colors.black : Colors.black,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -3,6 +3,8 @@ import 'package:berkatjaya_web/login_screen.dart';
 import 'package:berkatjaya_web/notatempo_screen.dart';
 import 'package:berkatjaya_web/pembayaran_screen.dart';
 import 'package:berkatjaya_web/produk_page.dart';
+import 'package:berkatjaya_web/riwayattransaksi_screen.dart';
+import 'package:berkatjaya_web/statusnotatempo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -26,7 +28,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:  KasirScreen(), // Menampilkan HomeScreen pertama kali
+      home:  StatusNotaTempoScreen(), // Menampilkan HomeScreen pertama kali
     );
   }
 }

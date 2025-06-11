@@ -46,7 +46,7 @@ class CetakNotaScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Transaksi Sudah Selesai'),
-        content: Text('Transaksi sudah selesai. Anda tidak dapat kembali ke halaman pembayaran.'),
+        content: Text('Transaksi sudah selesai. Anda tidak dapat kembali ke halaman sebelumnya.'),
         actions: <Widget>[
           TextButton(
             onPressed: () {
