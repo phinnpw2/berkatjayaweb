@@ -493,7 +493,6 @@ class _KasirScreenState extends State<KasirScreen> {
                                 ),
                               ),
                             ),
-                            
                           ],
                         ),
                       ),

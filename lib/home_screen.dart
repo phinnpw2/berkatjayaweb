@@ -1,3 +1,4 @@
+import 'package:berkatjaya_web/laporan_screen.dart';
 import 'package:flutter/material.dart';
 import 'produk_page.dart';
 import 'kasir_screen.dart';
@@ -167,6 +168,13 @@ class HomeScreen extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => RiwayatTransaksiScreen(),
+                              ),
+                            );
+                          } else if (title == 'Laporan') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LaporanScreen(),
                               ),
                             );
                           } else if (title == 'Stok Produk') {
