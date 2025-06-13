@@ -3,6 +3,7 @@ import 'package:berkatjaya_web/kasir_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl package
 import 'package:shared_preferences/shared_preferences.dart';
+import 'notatempo_screen.dart'; // Impor NotaTempoScreen
 
 class CetakNotaScreen extends StatelessWidget {
   final String customerName; 
@@ -42,7 +43,7 @@ class CetakNotaScreen extends StatelessWidget {
   // Fungsi untuk mencegah navigasi kembali dan menampilkan notifikasi
   Future<bool> _onWillPop(BuildContext context) async {
     // Tampilkan dialog untuk memastikan pengguna ingin kembali tanpa menyelesaikan transaksi
-    bool result = await showDialog<bool>(
+    bool result = await showDialog<bool>( 
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Transaksi Sudah Selesai'),
@@ -107,8 +108,6 @@ class CetakNotaScreen extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 10),
-                      
-
                       // Nama Toko dan Alamat
                       Text(
                         'Toko Berkat Jaya\nJl. Slamet Riady', 
@@ -116,7 +115,6 @@ class CetakNotaScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 10),
-
                       // Tanggal dan Waktu
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -157,10 +155,10 @@ class CetakNotaScreen extends StatelessWidget {
                       SizedBox(height: 15),
                       Text('Bayar dengan: $paymentMethod', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
                       SizedBox(height: 20),
+                      // Tombol Transaksi Baru
                       Center(
                         child: ElevatedButton(
                           onPressed: () async {
-
                             // Arahkan ke KasirScreen untuk transaksi baru
                             Navigator.pushAndRemoveUntil(
                               context,
@@ -171,6 +169,27 @@ class CetakNotaScreen extends StatelessWidget {
                           child: Text('Transaksi Baru', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,  // Mengubah warna tombol menjadi hijau
+                            padding: EdgeInsets.symmetric(horizontal: 80, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30), // Rounded corners
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      // Tombol Nota Tempo
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            // Arahkan ke NotaTempoScreen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => NotaTempoScreen()),
+                            );
+                          },
+                          child: Text('Nota Tempo', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,  // Mengubah warna tombol menjadi oranye
                             padding: EdgeInsets.symmetric(horizontal: 80, vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30), // Rounded corners

@@ -3,7 +3,8 @@ import 'dart:ui';  // Menambahkan impor untuk ImageFilter
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl untuk format tanggal
-import 'pesanan_screen.dart';  // Pastikan file ini ada dan sesuai
+import 'pesanan_screen.dart'; 
+import 'home_screen.dart'; 
 
 void main() {
   runApp(MaterialApp(
@@ -237,6 +238,16 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
       appBar: AppBar(
         title: Text('Nota Tempo App'),
         backgroundColor: Colors.lightBlue,
+        leading: IconButton(
+    icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
+    onPressed: () {
+      // Fungsi untuk kembali ke HomeScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')), // Sesuaikan dengan data Anda
+      );
+    },
+  ),
         actions: [
           IconButton(
             icon: Icon(Icons.history),

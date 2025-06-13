@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'pembayaran_screen.dart';
 import 'riwayattransaksi_screen.dart';
+import 'home_screen.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -190,16 +191,27 @@ class _KasirScreenState extends State<KasirScreen> {
         title: Text('Kasir App', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent, 
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blueAccent, Colors.pinkAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+         leading: IconButton(
+    icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
+    onPressed: () {
+      // Fungsi untuk kembali ke HomeScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')), // Sesuaikan dengan data Anda
+      );
+    },
+  ),
+  flexibleSpace: Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Colors.blueAccent, Colors.pinkAccent],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
+    ),
+  ),
+),
+        
       body: Stack(
         children: [
           Positioned.fill(
@@ -481,6 +493,7 @@ class _KasirScreenState extends State<KasirScreen> {
                                 ),
                               ),
                             ),
+                            
                           ],
                         ),
                       ),

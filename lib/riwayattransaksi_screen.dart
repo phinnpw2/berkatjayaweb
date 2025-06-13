@@ -14,7 +14,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   DateTime? startDate;
   DateTime? endDate;
   List<Map<String, dynamic>> transactions = [];
-
   TextEditingController searchController = TextEditingController();
 
   Future<void> loadTransactionsFromPrefs() async {
@@ -80,7 +79,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(8.0), // Reduce padding for search field
+                padding: const EdgeInsets.all(8.0),
                 child: TextField(
                   controller: searchController,
                   onChanged: (query) {
@@ -142,7 +141,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                   itemBuilder: (context, index) {
                     var transaction = transactions[index];
 
-                    // Filter berdasarkan nama pelanggan dan tanggal
                     if (!transaction['customerName']
                         .toLowerCase()
                         .contains(searchQuery)) {
@@ -151,7 +149,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
                     return GestureDetector(
                       onTap: () {
-                        // Menampilkan rincian produk ketika transaksi diklik
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -164,17 +161,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                   children: [
                                     Text('Metode Pembayaran: ${transaction['paymentMethod']}'),
                                     SizedBox(height: 10),
-                                    Text("Total Harga : ${transaction['totalAmount']}"),
+                                    Text("Total Harga : ${transaction['totalAmount'] ?? 'Tidak ada total'}"),
                                     SizedBox(height: 10),
                                     Text('Rincian Produk:'),
                                     SizedBox(height: 10),
-
-                                    // Menampilkan rincian produk dengan kotak kecil
                                     if (transaction['orderDetails'] != null && transaction['orderDetails'].isNotEmpty)
                                       Column(
                                         children: List.generate(transaction['orderDetails'].length, (i) {
                                           var product = transaction['orderDetails'][i];
-                                          // Harga dihitung berdasarkan quantity
                                           double totalPrice = product['price'] * product['quantity'];
                                           return Card(
                                             margin: EdgeInsets.only(bottom: 10),
@@ -192,7 +186,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                                   SizedBox(height: 5),
                                                   Text('Jumlah: ${product['quantity']}'),
                                                   Text('Harga per Unit: Rp ${product['price']}'),
-                                                  Text('Total: Rp ${totalPrice}'), // Harga dihitung berdasarkan quantity
+                                                  Text('Total: Rp ${totalPrice}'),
                                                 ],
                                               ),
                                             ),
@@ -232,11 +226,17 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                                 SizedBox(height: 5),
-                                Text('Tanggal: ${transaction['date']}'),
+                                Text('Tanggal: ${transaction['date'] ?? 'Tidak ada tanggal'}'),
                                 SizedBox(height: 5),
-                                Text('Total: Rp ${transaction['totalAmount']}'),
+                                Text('Total: Rp ${transaction['totalAmount'] ?? '0.0'}'),
                                 SizedBox(height: 5),
-                                Text('Pengembalian: Rp ${transaction['change']}'),
+                                Text('Pengembalian: Rp ${transaction['change'] ?? '0.0'}'),
+                                SizedBox(height: 5),
+                                if (transaction['keterangan'] != null && transaction['keterangan'] == 'notatempo')
+                                  Text(
+                                    'Keterangan: Nota Tempo',
+                                    style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic),
+                                  ),
                                 SizedBox(height: 5),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'produk_page.dart';
 import 'kasir_screen.dart';
 import 'notatempo_screen.dart';  // Impor NotaTempoScreen
+import 'riwayattransaksi_screen.dart';
+import 'statusnotatempo_screen.dart'; // Impor RiwayatTransaksiScreen
 import 'pengaturan_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -98,14 +100,15 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 10),
+                  // Membuat Grid dengan kotak yang lebih kecil dan lebih terstruktur
                   GridView.builder(
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                      crossAxisCount: 3, // Menggunakan 3 kolom untuk grid
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: screenWidth > 600 ? 1.3 : 1,
+                      childAspectRatio: screenWidth > 600 ? 1.0 : 1.2,
                     ),
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
@@ -142,7 +145,7 @@ class HomeScreen extends StatelessWidget {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => NotaTempoScreen(), // Arahkan ke Nota Tempo
+                                              builder: (context) => NotaTempoScreen(),
                                             ),
                                           );
                                         },
@@ -151,6 +154,20 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                 );
                               },
+                            );
+                          } else if (title == 'Status Nota Tempo') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => StatusNotaTempoScreen(),
+                              ),
+                            );
+                          } else if (title == 'Riwayat Transaksi') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RiwayatTransaksiScreen(),
+                              ),
                             );
                           } else if (title == 'Stok Produk') {
                             Navigator.push(
@@ -168,6 +185,8 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ),
                             );
+                          } else if (title == 'Laporan') {
+                            // Anda dapat menambahkan kode navigasi untuk Laporan di sini
                           }
                         },
                       );
@@ -199,15 +218,15 @@ class CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
       ),
-      elevation: 8,
+      elevation: 5,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
               colors: [Colors.blueAccent, Colors.purpleAccent],
               begin: Alignment.topLeft,
@@ -215,22 +234,22 @@ class CategoryCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withOpacity(0.1),
                 spreadRadius: 2,
-                blurRadius: 5,
-                offset: Offset(0, 4),
+                blurRadius: 4,
+                offset: Offset(0, 2),
               ),
             ],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(imagePath, height: 40, width: 40),
-              SizedBox(height: 10),
+              Image.asset(imagePath, height: 50, width: 50),
+              SizedBox(height: 8),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -246,6 +265,8 @@ class CategoryCard extends StatelessWidget {
 final List<Map<String, dynamic>> categories = [
   {'title': 'Kasir', 'imagePath': 'assets/kasirlogo.png'},
   {'title': 'Stok Produk', 'imagePath': 'assets/stoklogo.png'},
-  {'title': 'Laporan', 'imagePath': 'assets/laporanlogo.png'},
+  {'title': 'Laporan', 'imagePath': 'assets/laporanlogo.png'}, // Laporan tetap ada
   {'title': 'Pengaturan', 'imagePath': 'assets/pengaturanlogo.png'},
+  {'title': 'Status Nota Tempo', 'imagePath': 'assets/notatemologo.png'}, // Tambahkan Status Nota Tempo
+  {'title': 'Riwayat Transaksi', 'imagePath': 'assets/riwayatlogo.png'}, // Tambahkan Riwayat Transaksi
 ];
