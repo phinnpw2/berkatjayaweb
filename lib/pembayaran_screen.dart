@@ -7,8 +7,9 @@ import 'package:berkatjaya_web/cetaknota_screen.dart';
 
 class PembayaranScreen extends StatefulWidget {
   final List<Map<String, dynamic>> orderMenu;
+  final String invoiceNumber; // Menerima parameter invoiceNumber
 
-  PembayaranScreen({required this.orderMenu});
+  PembayaranScreen({required this.orderMenu, required this.invoiceNumber}); // Constructor menerima invoiceNumber
 
   @override
   _PembayaranScreenState createState() => _PembayaranScreenState();
@@ -52,6 +53,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
       'change': change,
       'status_transaksi': 'selesai',
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+      'invoiceNumber': widget.invoiceNumber, // Menyimpan nomor invoice
     };
 
     final prefs = await SharedPreferences.getInstance();
@@ -224,6 +226,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                                     change: change,
                                     paymentMethod: paymentMethod,
                                     customerName: customerNameController.text,
+                                    invoiceNumber: widget.invoiceNumber, // Pastikan invoiceNumber dikirimkan ke CetakNotaScreen
                                   ),
                                 ),
                               );

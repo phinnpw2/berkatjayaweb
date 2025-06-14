@@ -29,6 +29,26 @@ class _KasirScreenState extends State<KasirScreen> {
   final List<Map<String, dynamic>> orderMenu = [];
   String? selectedProductId;
 
+  // Fungsi untuk menghasilkan nomor nota yang berurutan
+  Future<String> generateInvoiceNumber() async {
+    final counterDoc = await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').get();
+
+    int counter = 1;
+    if (counterDoc.exists) {
+      counter = counterDoc.data()?['counter'] ?? 1;
+    }
+
+    // Membuat nomor nota dengan format INV001, INV002, dll
+    String invoiceNumber = 'INV${counter.toString().padLeft(3, '0')}';
+
+    // Increment counter untuk nomor nota berikutnya
+    await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').set({
+      'counter': counter + 1,
+    });
+
+    return invoiceNumber;
+  }
+
   void addToOrder(String id, String name, double price, int stock) async {
     if (stock > 0) {
       setState(() {
@@ -165,14 +185,18 @@ class _KasirScreenState extends State<KasirScreen> {
     );
   }
 
-  void handlePayment() {
+  void handlePayment() async {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
     } else {
+      // Menghasilkan nomor nota terurut
+      String invoiceNumber = await generateInvoiceNumber();
+
+      // Kirim transaksi ke halaman pembayaran dengan nomor nota yang terurut
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PembayaranScreen(orderMenu: orderMenu),
+          builder: (context) => PembayaranScreen(orderMenu: orderMenu, invoiceNumber: invoiceNumber),
         ),
       );
     }
@@ -191,27 +215,26 @@ class _KasirScreenState extends State<KasirScreen> {
         title: Text('Kasir App', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent, 
         elevation: 0,
-         leading: IconButton(
-    icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
-    onPressed: () {
-      // Fungsi untuk kembali ke HomeScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')), // Sesuaikan dengan data Anda
-      );
-    },
-  ),
-  flexibleSpace: Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Colors.blueAccent, Colors.pinkAccent],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
+          onPressed: () {
+            // Fungsi untuk kembali ke HomeScreen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')), // Sesuaikan dengan data Anda
+            );
+          },
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blueAccent, Colors.pinkAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
-    ),
-  ),
-),
-        
       body: Stack(
         children: [
           Positioned.fill(

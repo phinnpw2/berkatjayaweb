@@ -71,6 +71,26 @@ class _PesananScreenState extends State<PesananScreen> {
     }
   }
 
+  // Fungsi untuk menghasilkan invoice number secara otomatis
+  Future<String> generateInvoiceNumber() async {
+    // Mendapatkan referensi ke collection 'invoiceCounter'
+    DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
+    DocumentSnapshot snapshot = await invoiceRef.get();
+
+    int invoiceNumber = 1; // Jika belum ada nomor invoice, mulai dari 1
+
+    if (snapshot.exists) {
+      invoiceNumber = snapshot['invoiceNumber'] ?? 1;
+    }
+
+    // Update nomor invoice
+    await invoiceRef.set({
+      'invoiceNumber': invoiceNumber + 1,
+    });
+
+    return 'INV${invoiceNumber.toString().padLeft(4, '0')}'; // Format INV0001, INV0002, dst.
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,6 +173,7 @@ class _PesananScreenState extends State<PesananScreen> {
                     final orderId = filteredDocs[index].id;
                     final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
                     final formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
+                    final invoiceNumber = pesananData['invoiceNumber']; // Mengambil nomor invoice dari Firestore
 
                     return GestureDetector(
                       onTap: () {
@@ -168,8 +189,9 @@ class _PesananScreenState extends State<PesananScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Pelanggan: $customerName'),
+                                    Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontWeight: FontWeight.bold)),
                                     SizedBox(height: 10),
-                                    Text('Rincian Produk:'),  // Menampilkan rincian produk
+                                    Text('Rincian Produk:'),
                                     SizedBox(height: 10),
                                     Column(
                                       children: List.generate(orderMenu.length, (i) {
@@ -225,16 +247,19 @@ class _PesananScreenState extends State<PesananScreen> {
                               SizedBox(height: 10),
                               ElevatedButton(
                                 onPressed: () async {
-                                  // Pastikan nilai totalAmount, change, dan paymentMethod tidak null
                                   double totalAmount = pesananData['total'] ?? 0.0;
                                   double change = pesananData['change'] ?? 0.0;
                                   String paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
 
                                   List<Map<String, dynamic>> formattedOrderMenu = List<Map<String, dynamic>>.from(orderMenu);
 
+                                  // Generate invoice number
+                                  String invoiceNumber = await generateInvoiceNumber();
+
                                   // Update status pesanan menjadi "Belum Lunas"
                                   await FirebaseFirestore.instance.collection('pesanan').doc(orderId).update({
                                     'status': 'Belum Lunas',
+                                    'invoiceNumber': invoiceNumber,  // Menambahkan invoice number
                                   });
 
                                   // Menghapus pesanan dari koleksi pesanan
@@ -248,6 +273,7 @@ class _PesananScreenState extends State<PesananScreen> {
                                     'change': change,
                                     'paymentMethod': paymentMethod,
                                     'status': 'Belum Lunas',  // Menambahkan status
+                                    'invoiceNumber': invoiceNumber,  // Menyimpan nomor invoice
                                   });
 
                                   // Navigasi ke CetakNotaScreen dengan data yang sesuai
@@ -260,6 +286,7 @@ class _PesananScreenState extends State<PesananScreen> {
                                         totalAmount: totalAmount,
                                         change: change,
                                         paymentMethod: paymentMethod,
+                                        invoiceNumber: invoiceNumber,  // Mengirimkan invoice number
                                       ),
                                     ),
                                   );

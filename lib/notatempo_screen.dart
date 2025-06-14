@@ -173,6 +173,22 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
     return total;
   }
 
+  // Fungsi untuk mendapatkan nomor invoice
+  Future<String> generateInvoiceNumber() async {
+    DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
+    DocumentSnapshot invoiceSnapshot = await invoiceRef.get();
+    int invoiceNumber = 1;
+
+    if (invoiceSnapshot.exists) {
+      invoiceNumber = invoiceSnapshot['counter'] ?? 1;
+    }
+
+    // Update nomor invoice yang ada di Firestore
+    await invoiceRef.set({'counter': invoiceNumber + 1}, SetOptions(merge: true));
+
+    return 'INV${invoiceNumber.toString().padLeft(3, '0')}';
+  }
+
   // Fungsi untuk menyimpan pesanan ke daftar pesanan
   void saveOrder() async {
     if (orderMenu.isEmpty) {
@@ -215,13 +231,16 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
         return;
       }
 
-      // Menyimpan pesanan ke Firestore
+      // Menyimpan pesanan dengan nomor invoice ke Firestore
+      String invoiceNumber = await generateInvoiceNumber(); // Dapatkan nomor invoice
+
       final orderRef = FirebaseFirestore.instance.collection('pesanan').doc();
       await orderRef.set({
         'orderDetails': orderMenu,
         'total': totalCharge,
         'timestamp': FieldValue.serverTimestamp(),
         'customerName': customerName, // Menyimpan nama pelanggan
+        'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
       });
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil disimpan!')));
@@ -361,7 +380,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                       ),
                     ),
                     Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
+                      child: StreamBuilder<QuerySnapshot>( 
                         stream: FirebaseFirestore.instance
                             .collection('produk')
                             .where('kategori', isEqualTo: selectedCategory == 'All' ? null : selectedCategory)
@@ -560,6 +579,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
     );
   }
 }
+
 
 // Kategori button
 class CategoryButton extends StatelessWidget {
