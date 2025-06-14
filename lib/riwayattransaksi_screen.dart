@@ -42,7 +42,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     }
   }
 
-  // Hapus transaksi dari SharedPreferences dan Firestore berdasarkan indeks
+  // Fungsi untuk menghapus transaksi berdasarkan customerName
   Future<void> deleteTransaction(int index) async {
     setState(() {
       _isLoading = true; // Tampilkan spinner saat menghapus
@@ -51,7 +51,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-      String deletedTransactionJson = transactionStrings.removeAt(index);
+      String deletedTransactionJson = transactionStrings.removeAt(index); // Menghapus transaksi dari daftar
 
       // Update SharedPreferences setelah menghapus transaksi
       await prefs.setStringList('transactions', transactionStrings);
@@ -59,21 +59,25 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       // Parse data transaksi yang dihapus
       Map<String, dynamic> deletedTransaction = json.decode(deletedTransactionJson);
 
-      // Cek documentId dari transaksi yang akan dihapus
-      String documentId = deletedTransaction['documentId'] ?? ''; // Pastikan documentId ada
-      if (documentId.isEmpty) {
-        // Jika tidak ada documentId, kita coba ambil ID dokumen langsung dari Firestore
-        documentId = await getDocumentIdFromFirestore(deletedTransaction);
-      }
+      // Mendapatkan nama pelanggan dari transaksi yang dihapus
+      String customerName = deletedTransaction['customerName'] ?? ''; // Pastikan ada nama pelanggan
 
-      print("Attempting to delete transaction with documentId: $documentId");
+      if (customerName.isNotEmpty) {
+        // Hapus transaksi dari Firestore berdasarkan customerName
+        var snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi')
+            .where('customerName', isEqualTo: customerName)
+            .get();
 
-      if (documentId.isNotEmpty) {
-        // Hapus transaksi dari Firestore berdasarkan documentId
-        await FirebaseFirestore.instance.collection('riwayattransaksi').doc(documentId).delete();
-        print("Transaction successfully deleted from Firestore.");
-      } else {
-        print("No valid documentId found for this transaction.");
+        if (snapshot.docs.isEmpty) {
+          print("Tidak ada transaksi untuk pelanggan $customerName.");
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi untuk pelanggan ini')));
+        } else {
+          // Menghapus transaksi berdasarkan customerName
+          for (var doc in snapshot.docs) {
+            await doc.reference.delete();
+            print("Transaksi dengan pelanggan $customerName berhasil dihapus.");
+          }
+        }
       }
 
       // Reload transaksi setelah penghapusan
@@ -88,25 +92,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       });
     }
   }
-
-  Future<String> getDocumentIdFromFirestore(Map<String, dynamic> transaction) async {
-  try {
-    // Mencari dokumen berdasarkan nama pelanggan atau kriteria lain yang relevan
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('riwayattransaksi')
-        .where('customerName', isEqualTo: transaction['customerName'])
-        .limit(1)
-        .get();
-
-    if (snapshot.docs.isNotEmpty) {
-      // Ambil documentId dari hasil pencarian
-      return snapshot.docs.first.id;
-    }
-  } catch (e) {
-    print("Error finding documentId: $e");
-  }
-  return ''; // Jika tidak ditemukan, kembalikan string kosong
-}
 
   // Filter transaksi berdasarkan query pencarian
   @override
