@@ -28,9 +28,10 @@ class _KasirScreenState extends State<KasirScreen> {
   bool isDropdownVisible = false;
   final List<Map<String, dynamic>> orderMenu = [];
   String? selectedProductId;
+  String? invoiceNumber; // Menyimpan nomor invoice sementara
 
   // Fungsi untuk menghasilkan nomor nota yang berurutan
-  Future<String> generateInvoiceNumber() async {
+  Future<void> generateInvoiceNumber() async {
     final counterDoc = await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').get();
 
     int counter = 1;
@@ -39,14 +40,20 @@ class _KasirScreenState extends State<KasirScreen> {
     }
 
     // Membuat nomor nota dengan format INV001, INV002, dll
-    String invoiceNumber = 'INV${counter.toString().padLeft(3, '0')}';
+    setState(() {
+      invoiceNumber = 'INV${counter.toString().padLeft(3, '0')}';
+    });
 
     // Increment counter untuk nomor nota berikutnya
     await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').set({
       'counter': counter + 1,
     });
+  }
 
-    return invoiceNumber;
+  @override
+  void initState() {
+    super.initState();
+    generateInvoiceNumber();  // Menghasilkan nomor invoice pada saat awal
   }
 
   void addToOrder(String id, String name, double price, int stock) async {
@@ -118,9 +125,9 @@ class _KasirScreenState extends State<KasirScreen> {
   }
 
   void editItemQuantity(String id, String name, double price, int currentQuantity, int stock) async {
-    int availableStock = stock + currentQuantity; 
+    int availableStock = stock + currentQuantity;
 
-    int newQuantity = currentQuantity; 
+    int newQuantity = currentQuantity;
     TextEditingController quantityController = TextEditingController(text: currentQuantity.toString());
 
     showDialog(
@@ -189,14 +196,11 @@ class _KasirScreenState extends State<KasirScreen> {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
     } else {
-      // Menghasilkan nomor nota terurut
-      String invoiceNumber = await generateInvoiceNumber();
-
       // Kirim transaksi ke halaman pembayaran dengan nomor nota yang terurut
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PembayaranScreen(orderMenu: orderMenu, invoiceNumber: invoiceNumber),
+          builder: (context) => PembayaranScreen(orderMenu: orderMenu, invoiceNumber: invoiceNumber!),
         ),
       );
     }
@@ -216,12 +220,11 @@ class _KasirScreenState extends State<KasirScreen> {
         backgroundColor: Colors.transparent, 
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
+          icon: Icon(Icons.arrow_back),
           onPressed: () {
-            // Fungsi untuk kembali ke HomeScreen
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')), // Sesuaikan dengan data Anda
+              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')),
             );
           },
         ),

@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:ui';  // Menambahkan impor untuk ImageFilter
+import 'dart:ui'; // Menambahkan impor untuk ImageFilter
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl untuk format tanggal
-import 'pesanan_screen.dart'; 
-import 'home_screen.dart'; 
+import 'pesanan_screen.dart';
+import 'home_screen.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -580,7 +580,6 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
   }
 }
 
-
 // Kategori button
 class CategoryButton extends StatelessWidget {
   final String label;
@@ -611,4 +610,3 @@ class CategoryButton extends StatelessWidget {
     );
   }
 }
-

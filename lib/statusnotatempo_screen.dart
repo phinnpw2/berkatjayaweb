@@ -24,6 +24,22 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
     }
   }
 
+  // Fungsi untuk menghasilkan nomor nota secara otomatis
+  Future<String> generateInvoiceNumber() async {
+    DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
+    DocumentSnapshot invoiceSnapshot = await invoiceRef.get();
+    int invoiceNumber = 1;
+
+    if (invoiceSnapshot.exists) {
+      invoiceNumber = invoiceSnapshot['counter'] ?? 1;
+    }
+
+    // Update nomor invoice yang ada di Firestore
+    await invoiceRef.set({'counter': invoiceNumber + 1}, SetOptions(merge: true));
+
+    return 'INV${invoiceNumber.toString().padLeft(4, '0')}';
+  }
+
   // Fungsi untuk menangani konfirmasi pembayaran
   Future<void> konfirmasiPembayaran(String orderId, Map<String, dynamic> pesananData) async {
     try {
@@ -39,11 +55,15 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
 
       // Verifikasi pembayaran
       if (amountPaid >= totalAmount) {
-        // Update status pesanan menjadi "Lunas"
+        // Generate Invoice Number (Nomor Nota)
+        String invoiceNumber = await generateInvoiceNumber();
+
+        // Update status pesanan menjadi "Lunas" dan tambahkan invoice number
         await FirebaseFirestore.instance.collection('statusnotatempo').doc(orderId).update({
           'status': 'Lunas',
+          'invoiceNumber': invoiceNumber,  // Menambahkan nomor invoice
         }).then((_) {
-          print('Status berhasil diperbarui menjadi Lunas.');
+          print('Status berhasil diperbarui menjadi Lunas dengan Invoice Number: $invoiceNumber.');
         }).catchError((e) {
           print('Error saat memperbarui status: $e');
         });
@@ -57,14 +77,18 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
           'status': 'Lunas',
           'timestamp': FieldValue.serverTimestamp(),
           'keterangan': 'notatempo',
+          'invoiceNumber': invoiceNumber,  // Menyimpan nomor invoice
           'date': DateFormat('yyyy-MM-dd').format(DateTime.now()), // Menambahkan tanggal transaksi
           'change': amountPaid - totalAmount,  // Menghitung pengembalian
         });
 
+        // Simpan ke SharedPreferences untuk riwayat transaksi yang baru
+        await saveTransactionLocally(customerName, orderDetails, totalAmount, paymentMethod, invoiceNumber);
+
         // Panggil fungsi untuk menghapus pesanan
         await deletePesanan(orderId);
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil dipindahkan ke riwayat transaksi')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil dipindahkan ke riwayat transaksi dengan nomor nota $invoiceNumber')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Jumlah pembayaran tidak mencukupi')));
       }
@@ -74,6 +98,34 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
       setState(() {
         _isLoading = false; // Sembunyikan loading spinner setelah proses selesai
       });
+    }
+  }
+
+  // Fungsi untuk menyimpan transaksi ke SharedPreferences
+  Future<void> saveTransactionLocally(String customerName, List<dynamic> orderDetails, double totalAmount, String paymentMethod, String invoiceNumber) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<String> transactions = prefs.getStringList('transactions') ?? [];
+
+      // Membuat data transaksi untuk disimpan
+      Map<String, dynamic> transaction = {
+        'customerName': customerName,
+        'orderDetails': orderDetails,
+        'totalAmount': totalAmount,
+        'paymentMethod': paymentMethod,
+        'status': 'Lunas',
+        'invoiceNumber': invoiceNumber,
+        'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        'change': totalAmount - totalAmount,  // Asumsikan tidak ada pengembalian
+      };
+
+      // Menambahkan transaksi ke SharedPreferences
+      transactions.add(json.encode(transaction));
+      await prefs.setStringList('transactions', transactions);
+
+      print("Transaksi berhasil disimpan di SharedPreferences");
+    } catch (e) {
+      print("Error saving transaction locally: $e");
     }
   }
 
@@ -129,8 +181,7 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
                                 SizedBox(height: 10),
                                 Text('Rincian Produk:'),
                                 SizedBox(height: 10),
-                                if (orderDetails.isNotEmpty)
-                                  Column(
+                                if (orderDetails.isNotEmpty) Column(
                                     children: List.generate(orderDetails.length, (i) {
                                       var product = orderDetails[i];
                                       double totalPrice = product['price'] * product['quantity'];

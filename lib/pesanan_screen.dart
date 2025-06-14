@@ -1,3 +1,4 @@
+import 'package:berkatjaya_web/notatempo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl untuk format tanggal
@@ -71,33 +72,48 @@ class _PesananScreenState extends State<PesananScreen> {
     }
   }
 
-  // Fungsi untuk menghasilkan invoice number secara otomatis
-  Future<String> generateInvoiceNumber() async {
-    // Mendapatkan referensi ke collection 'invoiceCounter'
+  // Fungsi untuk menghasilkan nomor invoice
+Future<String> generateInvoiceNumber() async {
+  try {
     DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
     DocumentSnapshot snapshot = await invoiceRef.get();
 
-    int invoiceNumber = 1; // Jika belum ada nomor invoice, mulai dari 1
+    int invoiceNumber = 1;
 
     if (snapshot.exists) {
-      invoiceNumber = snapshot['invoiceNumber'] ?? 1;
+      invoiceNumber = snapshot['counter'] ?? 1;  // Mengambil nomor invoice dari Firestore
     }
 
     // Update nomor invoice
     await invoiceRef.set({
-      'invoiceNumber': invoiceNumber + 1,
-    });
+      'counter': invoiceNumber + 1,  // Increment nomor invoice
+    }, SetOptions(merge: true));
 
-    return 'INV${invoiceNumber.toString().padLeft(4, '0')}'; // Format INV0001, INV0002, dst.
+    return 'INV${invoiceNumber.toString().padLeft(3, '0')}';  // Format INV001, INV002, dst.
+  } catch (e) {
+    print("Error generating invoice number: $e");
+    return 'INV001';  // Kembalikan default jika terjadi error
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pesanan'),
-        backgroundColor: Colors.deepPurpleAccent,
-      ),
+  title: Text('Pesanan'),
+  backgroundColor: Colors.deepPurpleAccent,
+  leading: IconButton(
+    icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
+    onPressed: () {
+      // Fungsi untuk kembali ke halaman NotaTempoScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => NotaTempoScreen()), 
+    );
+    },
+  ),
+),
       body: Column(
         children: [
           Padding(
@@ -244,6 +260,8 @@ class _PesananScreenState extends State<PesananScreen> {
                               Text('$customerName - Pesanan pada $formattedTime', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                               SizedBox(height: 10),
                               Text('Total: Rp ${(pesananData['total'] ?? 0.0).toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: Colors.green)),
+                              SizedBox(height: 10),
+                              Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontSize: 12, color: Colors.blue)),
                               SizedBox(height: 10),
                               ElevatedButton(
                                 onPressed: () async {

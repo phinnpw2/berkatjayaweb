@@ -118,13 +118,10 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          colors: [Colors.red, Colors.yellow],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ).createShader(bounds),
-                        child: Text('Pembayaran', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      // Menampilkan nomor nota di atas nama pelanggan
+                      Text(
+                        'Nomor Nota: ${widget.invoiceNumber}', // Menampilkan nomor nota
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 20),
                       TextField(
