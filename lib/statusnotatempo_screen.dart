@@ -42,6 +42,10 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
         // Update status pesanan menjadi "Lunas"
         await FirebaseFirestore.instance.collection('statusnotatempo').doc(orderId).update({
           'status': 'Lunas',
+        }).then((_) {
+          print('Status berhasil diperbarui menjadi Lunas.');
+        }).catchError((e) {
+          print('Error saat memperbarui status: $e');
         });
 
         // Pindahkan pesanan yang telah lunas ke riwayat transaksi
@@ -59,22 +63,6 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
 
         // Panggil fungsi untuk menghapus pesanan
         await deletePesanan(orderId);
-
-        // Menyimpan data ke SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        final transactionData = {
-          'customerName': customerName,
-          'orderDetails': orderDetails,
-          'totalAmount': totalAmount,
-          'paymentMethod': paymentMethod,
-          'status': 'Lunas',
-          'keterangan': 'notatempo',
-          'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        };
-
-        List<String> transactions = prefs.getStringList('transactions') ?? [];
-        transactions.add(json.encode(transactionData));
-        await prefs.setStringList('transactions', transactions);
 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil dipindahkan ke riwayat transaksi')));
       } else {

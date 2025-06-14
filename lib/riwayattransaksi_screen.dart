@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RiwayatTransaksiScreen extends StatefulWidget {
   @override
@@ -20,9 +21,17 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
+      
+      // Ambil transaksi dari Firestore jika ada
+      final snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi').get();
       List<Map<String, dynamic>> loadedTransactions = transactionStrings
           .map((e) => Map<String, dynamic>.from(json.decode(e)))
           .toList();
+
+      snapshot.docs.forEach((doc) {
+        loadedTransactions.add(doc.data() as Map<String, dynamic>);
+      });
+
       setState(() {
         transactions = loadedTransactions;
       });
@@ -31,11 +40,43 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     }
   }
 
+  Future<void> saveTransaction(Map<String, dynamic> transactionData) async {
+    try {
+      // Menyimpan transaksi ke Firestore
+      await FirebaseFirestore.instance.collection('riwayattransaksi').add(transactionData);
+      
+      // Menyimpan transaksi juga ke SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      List<String> transactions = prefs.getStringList('transactions') ?? [];
+      transactions.add(json.encode(transactionData));
+      await prefs.setStringList('transactions', transactions);
+
+      print('Transaksi berhasil disimpan');
+    } catch (e) {
+      print("Error saving transaction: $e");
+    }
+  }
+
   Future<void> deleteTransaction(int index) async {
     final prefs = await SharedPreferences.getInstance();
     List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-    transactionStrings.removeAt(index);
+    String deletedTransactionJson = transactionStrings.removeAt(index);
     await prefs.setStringList('transactions', transactionStrings);
+    
+    // Parse data transaksi yang dihapus
+    Map<String, dynamic> deletedTransaction = json.decode(deletedTransactionJson);
+    
+    // Hapus transaksi dari Firestore
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('riwayattransaksi')
+        .where('customerName', isEqualTo: deletedTransaction['customerName'])
+        .where('date', isEqualTo: deletedTransaction['date'])
+        .get();
+
+    for (var doc in querySnapshot.docs) {
+      await doc.reference.delete();
+    }
+
     loadTransactionsFromPrefs();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil dihapus')));
   }
