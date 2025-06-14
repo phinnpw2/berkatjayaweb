@@ -1,4 +1,5 @@
 import 'package:berkatjaya_web/kasir_screen.dart';
+import 'package:berkatjaya_web/laporan_screen.dart';
 import 'package:berkatjaya_web/login_screen.dart';
 import 'package:berkatjaya_web/notatempo_screen.dart';
 import 'package:berkatjaya_web/pembayaran_screen.dart';
