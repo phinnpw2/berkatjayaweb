@@ -98,8 +98,12 @@ class _LoginPageState extends State<LoginPage> {
               padding: EdgeInsets.all(20),
               margin: EdgeInsets.only(top: 100),  // Added margin to prevent touching the top
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(5),
+                color: Colors.white.withOpacity(0.5), // Semi-transparent white background
+                borderRadius: BorderRadius.circular(8),  // Rounded corners
+                border: Border.all(
+                  color: Colors.blue,  // Border color
+                  width: 2,  // Border width
+                ),
                 boxShadow: [
                   BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
                 ],
@@ -126,12 +130,12 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   SizedBox(height: 10),
-                  // Email Address TextField
+                  // Username TextField
                   TextField(
                     controller: _usernameController,
                     decoration: InputDecoration(
                       labelText: 'Username',
-                      prefixIcon: Icon(Icons.email),
+                      prefixIcon: Icon(Icons.person),
                       filled: true,
                       fillColor: Colors.grey[200],
                       border: OutlineInputBorder(

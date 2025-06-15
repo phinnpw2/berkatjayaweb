@@ -22,8 +22,6 @@ class _PesananScreenState extends State<PesananScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      fieldLabelText: 'Pilih Tanggal Mulai',
-      initialDatePickerMode: DatePickerMode.day,
     );
     if (picked != null && picked != startDate) {
       setState(() {
@@ -39,8 +37,6 @@ class _PesananScreenState extends State<PesananScreen> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
-      fieldLabelText: 'Pilih Tanggal Akhir',
-      initialDatePickerMode: DatePickerMode.day,
     );
     if (picked != null && picked != endDate) {
       setState(() {
@@ -73,47 +69,46 @@ class _PesananScreenState extends State<PesananScreen> {
   }
 
   // Fungsi untuk menghasilkan nomor invoice
-Future<String> generateInvoiceNumber() async {
-  try {
-    DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
-    DocumentSnapshot snapshot = await invoiceRef.get();
+  Future<String> generateInvoiceNumber() async {
+    try {
+      DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
+      DocumentSnapshot snapshot = await invoiceRef.get();
 
-    int invoiceNumber = 1;
+      int invoiceNumber = 1;
 
-    if (snapshot.exists) {
-      invoiceNumber = snapshot['counter'] ?? 1;  // Mengambil nomor invoice dari Firestore
+      if (snapshot.exists) {
+        invoiceNumber = snapshot['counter'] ?? 1;  // Mengambil nomor invoice dari Firestore
+      }
+
+      // Update nomor invoice
+      await invoiceRef.set({
+        'counter': invoiceNumber + 1,  // Increment nomor invoice
+      }, SetOptions(merge: true));
+
+      return 'INV${invoiceNumber.toString().padLeft(3, '0')}';  // Format INV001, INV002, dst.
+    } catch (e) {
+      print("Error generating invoice number: $e");
+      return 'INV001';  // Kembalikan default jika terjadi error
     }
-
-    // Update nomor invoice
-    await invoiceRef.set({
-      'counter': invoiceNumber + 1,  // Increment nomor invoice
-    }, SetOptions(merge: true));
-
-    return 'INV${invoiceNumber.toString().padLeft(3, '0')}';  // Format INV001, INV002, dst.
-  } catch (e) {
-    print("Error generating invoice number: $e");
-    return 'INV001';  // Kembalikan default jika terjadi error
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-  title: Text('Pesanan'),
-  backgroundColor: Colors.deepPurpleAccent,
-  leading: IconButton(
-    icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
-    onPressed: () {
-      // Fungsi untuk kembali ke halaman NotaTempoScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => NotaTempoScreen()), 
-    );
-    },
-  ),
-),
+        title: Text('Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Color(0xFF003f7f), // AppBar color matching RiwayatTransaksi screen
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => NotaTempoScreen()),
+            );
+          },
+        ),
+      ),
       body: Column(
         children: [
           Padding(
@@ -121,16 +116,17 @@ Future<String> generateInvoiceNumber() async {
             child: TextField(
               onChanged: (query) {
                 setState(() {
-                  searchQuery = query.toLowerCase(); // Mengubah pencarian menjadi lowercase untuk memudahkan pencarian
+                  searchQuery = query.toLowerCase(); // Mengubah pencarian menjadi lowercase
                 });
               },
               decoration: InputDecoration(
                 labelText: 'Cari Nama Pelanggan',
+                labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.bold), // Ensure text is visible
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.deepPurpleAccent),
+                  borderSide: BorderSide(color: Color(0xFF003f7f)),
                 ),
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(Icons.search, color: Color(0xFF003f7f)),
               ),
             ),
           ),
@@ -139,12 +135,30 @@ Future<String> generateInvoiceNumber() async {
             children: [
               ElevatedButton(
                 onPressed: () => selectStartDate(context),
-                child: Text(startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!)),
+                child: Text(
+                  startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), // White bold text for buttons
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF003f7f),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
               ),
               SizedBox(width: 10),
               ElevatedButton(
                 onPressed: () => selectEndDate(context),
-                child: Text(endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!)),
+                child: Text(
+                  endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), // White bold text for buttons
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF003f7f),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
               ),
             ],
           ),
@@ -189,22 +203,21 @@ Future<String> generateInvoiceNumber() async {
                     final orderId = filteredDocs[index].id;
                     final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
                     final formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
-                    final invoiceNumber = pesananData['invoiceNumber']; // Mengambil nomor invoice dari Firestore
+                    final invoiceNumber = pesananData['invoiceNumber'];
 
                     return GestureDetector(
                       onTap: () {
-                        // Menampilkan rincian produk ketika grid diklik
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
                             title: Text('Rincian Produk'),
                             content: Container(
-                              height: 250, // Batas tinggi kotak kecil
+                              height: 250,
                               child: SingleChildScrollView(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Pelanggan: $customerName'),
+                                    Text('Pelanggan: $customerName', style: TextStyle(fontWeight: FontWeight.bold)),
                                     Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontWeight: FontWeight.bold)),
                                     SizedBox(height: 10),
                                     Text('Rincian Produk:'),
@@ -257,11 +270,11 @@ Future<String> generateInvoiceNumber() async {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('$customerName - Pesanan pada $formattedTime', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              Text('$customerName - Pesanan pada $formattedTime', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
                               SizedBox(height: 10),
-                              Text('Total: Rp ${(pesananData['total'] ?? 0.0).toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: Colors.green)),
+                              Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
                               SizedBox(height: 10),
-                              Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontSize: 12, color: Colors.blue)),
+                              Text('Total: Rp ${(pesananData['total'] ?? 0.0).toStringAsFixed(2)}', style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
                               SizedBox(height: 10),
                               ElevatedButton(
                                 onPressed: () async {
@@ -271,30 +284,25 @@ Future<String> generateInvoiceNumber() async {
 
                                   List<Map<String, dynamic>> formattedOrderMenu = List<Map<String, dynamic>>.from(orderMenu);
 
-                                  // Generate invoice number
                                   String invoiceNumber = await generateInvoiceNumber();
 
-                                  // Update status pesanan menjadi "Belum Lunas"
                                   await FirebaseFirestore.instance.collection('pesanan').doc(orderId).update({
                                     'status': 'Belum Lunas',
-                                    'invoiceNumber': invoiceNumber,  // Menambahkan invoice number
+                                    'invoiceNumber': invoiceNumber,
                                   });
 
-                                  // Menghapus pesanan dari koleksi pesanan
                                   await FirebaseFirestore.instance.collection('pesanan').doc(orderId).delete();
 
-                                  // Menyimpan pesanan ke StatusNotaTempo
                                   await FirebaseFirestore.instance.collection('statusnotatempo').add({
                                     'customerName': customerName,
                                     'orderDetails': formattedOrderMenu,
                                     'total': totalAmount,
                                     'change': change,
                                     'paymentMethod': paymentMethod,
-                                    'status': 'Belum Lunas',  // Menambahkan status
-                                    'invoiceNumber': invoiceNumber,  // Menyimpan nomor invoice
+                                    'status': 'Belum Lunas',
+                                    'invoiceNumber': invoiceNumber,
                                   });
 
-                                  // Navigasi ke CetakNotaScreen dengan data yang sesuai
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -304,24 +312,29 @@ Future<String> generateInvoiceNumber() async {
                                         totalAmount: totalAmount,
                                         change: change,
                                         paymentMethod: paymentMethod,
-                                        invoiceNumber: invoiceNumber,  // Mengirimkan invoice number
+                                        invoiceNumber: invoiceNumber,
                                       ),
                                     ),
                                   );
                                 },
-                                child: Text('Cetak Nota'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueAccent, 
-                                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                ),
-                              ),
-                              SizedBox(height: 10),
+                                child: Text(
+    'Cetak Nota',
+    style: TextStyle(
+      color: Colors.white, // White text color
+      fontWeight: FontWeight.bold, // Bold text
+    ),
+  ),
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Color(0xFF003f7f), 
+    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  ),
+),
+                              SizedBox(height: 1),
                               Align(
                                 alignment: Alignment.bottomRight,
                                 child: IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  icon: Icon(Icons.delete, color: Colors.blueGrey),
                                   onPressed: () => deleteOrder(orderId, orderMenu),
                                 ),
                               ),

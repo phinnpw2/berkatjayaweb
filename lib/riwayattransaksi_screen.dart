@@ -18,7 +18,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   TextEditingController searchController = TextEditingController();
   bool _isLoading = false; // Untuk menampilkan spinner saat menghapus transaksi
 
-  // Load transaksi dari SharedPreferences dan Firestore
   Future<void> loadTransactionsFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -31,7 +30,19 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           .toList();
 
       snapshot.docs.forEach((doc) {
-        loadedTransactions.add(doc.data() as Map<String, dynamic>);
+        Map<String, dynamic> transactionData = doc.data() as Map<String, dynamic>;
+
+        if (transactionData['keterangan'] == 'notatempo') {
+          bool isDuplicate = loadedTransactions.any((existingTransaction) =>
+              existingTransaction['invoiceNumber'] == transactionData['invoiceNumber'] &&
+              existingTransaction['customerName'] == transactionData['customerName'] &&
+              existingTransaction['keterangan'] != 'notatempo');
+          if (!isDuplicate) {
+            loadedTransactions.add(transactionData);
+          }
+        } else {
+          loadedTransactions.add(transactionData);
+        }
       });
 
       setState(() {
@@ -42,7 +53,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     }
   }
 
-  // Fungsi untuk menghapus transaksi berdasarkan customerName
   Future<void> deleteTransaction(int index) async {
     setState(() {
       _isLoading = true; // Tampilkan spinner saat menghapus
@@ -93,7 +103,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     }
   }
 
-  // Filter transaksi berdasarkan query pencarian
   @override
   void initState() {
     super.initState();
@@ -110,234 +119,211 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Riwayat Transaksi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Color(0xFF003f7f), // Updated to your color
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blueAccent, Colors.pinkAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator()) // Tampilkan spinner saat menghapus transaksi
-          : Stack(
+          ? Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                    child: Container(color: Colors.black.withOpacity(0.5)),
-                  ),
-                ),
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: (query) {
-                          setState(() {
-                            searchQuery = query.toLowerCase();
-                          });
-                        },
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        decoration: InputDecoration(
-                          labelText: 'Cari Nama Pelanggan',
-                          labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          prefixIcon: Icon(Icons.search, color: Colors.white),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(color: Colors.deepPurpleAccent),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(color: Colors.deepPurpleAccent),
-                          ),
-                        ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (query) {
+                      setState(() {
+                        searchQuery = query.toLowerCase();
+                      });
+                    },
+                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      labelText: 'Cari Nama Pelanggan',
+                      labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                      prefixIcon: Icon(Icons.search, color: Colors.black),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide(color: Colors.blueAccent),
                       ),
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => selectStartDate(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurpleAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: Text(
-                            startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!),
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => selectStartDate(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF003f7f),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
                         ),
-                        SizedBox(width: 10),
-                        ElevatedButton(
-                          onPressed: () => selectEndDate(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurpleAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: Text(
-                            endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!),
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
+                      ),
+                      child: Text(
+                        startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!),
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: transactions.length,
-                        itemBuilder: (context, index) {
-                          var transaction = transactions[index];
+                    SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () => selectEndDate(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF003f7f),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Text(
+                        endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!),
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: transactions.length,
+                    itemBuilder: (context, index) {
+                      var transaction = transactions[index];
 
-                          if (!transaction['customerName']
-                              .toLowerCase()
-                              .contains(searchQuery)) {
-                            return Container();
-                          }
+                      if (!transaction['customerName']
+                          .toLowerCase()
+                          .contains(searchQuery)) {
+                        return Container();
+                      }
 
-                          return GestureDetector(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text('Rincian Produk'),
-                                  content: Container(
-                                    height: 250, // Batas tinggi kotak kecil
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Metode Pembayaran: ${transaction['paymentMethod']}'),
-                                          SizedBox(height: 10),
-                                          Text("Total Harga : ${transaction['totalAmount'] ?? 'Tidak ada total'}"),
-                                          SizedBox(height: 10),
-                                          Text('Rincian Produk:'),
-                                          SizedBox(height: 10),
-                                          if (transaction['orderDetails'] != null && transaction['orderDetails'].isNotEmpty)
-                                            Column(
-                                              children: List.generate(transaction['orderDetails'].length, (i) {
-                                                var product = transaction['orderDetails'][i];
-                                                double totalPrice = product['price'] * product['quantity'];
-                                                return Card(
-                                                  margin: EdgeInsets.only(bottom: 10),
-                                                  elevation: 5,
-                                                  color: Colors.blueGrey.shade100,
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.all(8.0),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          product['name'],
-                                                          style: TextStyle(fontWeight: FontWeight.bold),
-                                                        ),
-                                                        SizedBox(height: 5),
-                                                        Text('Jumlah: ${product['quantity']}'),
-                                                        Text('Harga per Unit: Rp ${product['price']}'),
-                                                        Text('Total: Rp ${totalPrice}'),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            )
-                                          else
-                                            Text('Tidak ada produk untuk transaksi ini'),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text('Tutup'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: Align(
-                              alignment: Alignment.topRight,
-                              child: Card(
-                                elevation: 5,
-                                color: Colors.blueGrey.shade50,
-                                margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6.0),
+                      return GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Rincian Produk'),
+                              content: Container(
+                                height: 250,
+                                child: SingleChildScrollView(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'Nomor Nota: ${transaction['invoiceNumber'] ?? 'N/A'}',
-                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text('Pelanggan: ${transaction['customerName']}'),
-                                      SizedBox(height: 5),
-                                      Text('Tanggal: ${transaction['date'] ?? 'Tidak ada tanggal'}'),
-                                      SizedBox(height: 5),
-                                      Text('Total: Rp ${transaction['totalAmount'] ?? '0.0'}'),
-                                      SizedBox(height: 5),
-                                      Text('Pengembalian: Rp ${transaction['change'] ?? '0.0'}'),
-                                      SizedBox(height: 5),
-                                      if (transaction['keterangan'] != null && transaction['keterangan'] == 'notatempo')
-                                        Text(
-                                          'Keterangan: Nota Tempo',
-                                          style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic),
-                                        ),
-                                      SizedBox(height: 5),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          IconButton(
-                                            icon: Icon(Icons.delete, color: Colors.red),
-                                            onPressed: () {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                  title: Text('Hapus Transaksi'),
-                                                  content: Text('Apakah Anda yakin ingin menghapus transaksi ini?'),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () {
-                                                        Navigator.pop(context);
-                                                      },
-                                                      child: Text('Batal'),
+                                      Text('Metode Pembayaran: ${transaction['paymentMethod']}'),
+                                      SizedBox(height: 10),
+                                      Text("Total Harga : ${transaction['totalAmount'] ?? 'Tidak ada total'}"),
+                                      SizedBox(height: 10),
+                                      Text('Rincian Produk:'),
+                                      SizedBox(height: 10),
+                                      if (transaction['orderDetails'] != null && transaction['orderDetails'].isNotEmpty)
+                                        Column(
+                                          children: List.generate(transaction['orderDetails'].length, (i) {
+                                            var product = transaction['orderDetails'][i];
+                                            double totalPrice = product['price'] * product['quantity'];
+                                            return Card(
+                                              margin: EdgeInsets.only(bottom: 10),
+                                              elevation: 5,
+                                              color: Colors.blueGrey.shade100,
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      product['name'],
+                                                      style: TextStyle(fontWeight: FontWeight.bold),
                                                     ),
-                                                    TextButton(
-                                                      onPressed: () {
-                                                        Navigator.pop(context);
-                                                        deleteTransaction(index); // Menghapus transaksi berdasarkan indeks
-                                                      },
-                                                      child: Text('Hapus'),
-                                                    ),
+                                                    SizedBox(height: 5),
+                                                    Text('Jumlah: ${product['quantity']}'),
+                                                    Text('Harga per Unit: Rp ${product['price']}'),
+                                                    Text('Total: Rp ${totalPrice}'),
                                                   ],
                                                 ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
+                                              ),
+                                            );
+                                          }),
+                                        )
+                                      else
+                                        Text('Tidak ada produk untuk transaksi ini'),
                                     ],
                                   ),
                                 ),
                               ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text('Tutup'),
+                                ),
+                              ],
                             ),
                           );
                         },
-                      ),
-                    ),
-                  ],
+                        child: Align(
+                          alignment: Alignment.topRight,
+                          child: Card(
+                            elevation: 5,
+                            color: Colors.blueGrey.shade50,
+                            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Nomor Nota: ${transaction['invoiceNumber'] ?? 'N/A'}',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(height: 5),
+                                  Text('Pelanggan: ${transaction['customerName']}'),
+                                  SizedBox(height: 5),
+                                  Text('Tanggal: ${transaction['date'] != null ? DateFormat('yyyy-MM-dd').format(DateTime.parse(transaction['date'])) : 'Tidak ada tanggal'}'),
+                                  SizedBox(height: 5),
+                                  Text('Total: Rp ${transaction['totalAmount'] ?? '0.0'}'),
+                                  SizedBox(height: 5),
+                                  Text('Pengembalian: Rp ${transaction['change'] ?? '0.0'}'),
+                                  SizedBox(height: 5),
+                                  if (transaction['keterangan'] != null && transaction['keterangan'] == 'notatempo')
+                                    Text(
+                                      'Keterangan: Nota Tempo',
+                                      style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic),
+                                    ),
+                                  SizedBox(height: 5),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text('Hapus Transaksi'),
+                                              content: Text('Apakah Anda yakin ingin menghapus transaksi ini?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: Text('Batal'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                    deleteTransaction(index); // Menghapus transaksi berdasarkan indeks
+                                                  },
+                                                  child: Text('Hapus'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

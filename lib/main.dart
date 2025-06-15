@@ -3,6 +3,7 @@ import 'package:berkatjaya_web/laporan_screen.dart';
 import 'package:berkatjaya_web/login_screen.dart';
 import 'package:berkatjaya_web/notatempo_screen.dart';
 import 'package:berkatjaya_web/pembayaran_screen.dart';
+import 'package:berkatjaya_web/pesanan_screen.dart';
 import 'package:berkatjaya_web/produk_page.dart';
 import 'package:berkatjaya_web/riwayattransaksi_screen.dart';
 import 'package:berkatjaya_web/statusnotatempo_screen.dart';
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:  LoginPage(), // Menampilkan HomeScreen pertama kali
+      home:  PesananScreen(), // Menampilkan HomeScreen pertama kali
     );
   }
 }
