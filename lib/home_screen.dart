@@ -1,4 +1,3 @@
-import 'package:berkatjaya_web/laporan_screen.dart';
 import 'package:flutter/material.dart';
 import 'produk_page.dart';
 import 'kasir_screen.dart';
@@ -6,6 +5,7 @@ import 'notatempo_screen.dart';  // Impor NotaTempoScreen
 import 'riwayattransaksi_screen.dart';
 import 'statusnotatempo_screen.dart'; // Impor RiwayatTransaksiScreen
 import 'pengaturan_screen.dart';
+import 'laporan_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String username;
@@ -76,18 +76,20 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Improved "Selamat Datang Sahabatku" section
                   Container(
                     padding: EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.black.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      'Selamat Datang Sahabatku',
+                      'Selamat Datang, $username',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 24,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5, // Adding letter spacing for a more refined look
                       ),
                     ),
                   ),
@@ -101,15 +103,15 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 10),
-                  // Membuat Grid dengan kotak yang lebih kecil dan lebih terstruktur
+                  // Grid of categories with smaller cards
                   GridView.builder(
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, // Menggunakan 3 kolom untuk grid
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: screenWidth > 600 ? 1.0 : 1.2,
+                      crossAxisCount: 3, // 3 columns for grid
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: screenWidth > 600 ? 1.1 : 1.2, // Adjusted aspect ratio to better fit the layout
                     ),
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
@@ -120,7 +122,6 @@ class HomeScreen extends StatelessWidget {
                           final title = categories[index]['title'];
 
                           if (title == 'Kasir') {
-                            // Pilih antara Kasir langsung atau Nota Tempo
                             showDialog(
                               context: context,
                               builder: (BuildContext context) {
@@ -193,8 +194,6 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               ),
                             );
-                          } else if (title == 'Laporan') {
-                            // Anda dapat menambahkan kode navigasi untuk Laporan di sini
                           }
                         },
                       );
@@ -236,7 +235,7 @@ class CategoryCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
-              colors: [Colors.blueAccent, Colors.purpleAccent],
+              colors: [Color(0xFF003f7f), Color(0xFF003f7f)], // Blue gradient
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -252,13 +251,13 @@ class CategoryCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(imagePath, height: 50, width: 50),
+              Image.asset(imagePath, height: 40, width: 40), // Reduced icon size for smaller cards
               SizedBox(height: 8),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white,
+                  fontSize: 14, // Smaller text size for the category
+                  color: Colors.white, // White text color for contrast
                   fontWeight: FontWeight.bold,
                 ),
               ),
