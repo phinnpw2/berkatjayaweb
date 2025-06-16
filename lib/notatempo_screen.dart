@@ -10,7 +10,6 @@ void main() {
   runApp(MaterialApp(
     home: NotaTempoScreen(),
     theme: ThemeData(
-      primarySwatch: Colors.deepPurple,
       visualDensity: VisualDensity.adaptivePlatformDensity,
     ),
   ));
@@ -255,10 +254,15 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Nota Tempo App'),
-        backgroundColor: Colors.lightBlue,
-        leading: IconButton(
-    icon: Icon(Icons.arrow_back), // Ikon panah untuk kembali
+        title: Text('Nota Tempo', style: 
+        TextStyle(
+          color: Colors.white, 
+          fontWeight: FontWeight.bold),), 
+        backgroundColor: Color(0xFF003f7f),
+        elevation: 0,
+  leading: IconButton(
+    icon: Icon(Icons.arrow_back),
+    color: Colors.white, // Ikon panah untuk kembali
     onPressed: () {
       // Fungsi untuk kembali ke HomeScreen
       Navigator.pushReplacement(
@@ -281,15 +285,6 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
       ),
       body: Stack(
         children: [
-          // Latar belakang dengan efek blur
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-              child: Container(
-                color: Colors.black.withOpacity(0.5),
-              ),
-            ),
-          ),
           Row(
             children: [
               // Grid Produk di sebelah kiri
@@ -421,43 +416,44 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                               final base64Image = data['gambar'] ?? '';
 
                               return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedProductId = id;
-                                  });
-                                },
-                                child: Card(
-                                  elevation: 5,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      base64Image.isNotEmpty
-                                          ? ClipRRect(
-                                              borderRadius: BorderRadius.circular(10),
-                                              child: Image.memory(
-                                                base64Decode(base64Image),
-                                                width: 50,
-                                                height: 50,
-                                                fit: BoxFit.cover,
-                                              ),
-                                            )
-                                          : const Icon(Icons.fastfood, size: 50),
-                                      Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                      Text('Stok: $stock', style: TextStyle(fontSize: 16)),
-                                      IconButton(
-                                        icon: Icon(Icons.add, size: 30, color: Colors.deepPurple),
-                                        onPressed: () {
-                                          addToOrder(id, name, price, stock);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
+  onTap: () {
+    setState(() {
+      selectedProductId = id; 
+    });
+  },
+  child: Card(
+    elevation: 5,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(15),
+      side: BorderSide(color: Colors.black, width: 2), // Menambahkan border hitam
+    ),
+    color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white, 
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        base64Image.isNotEmpty
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.memory(
+                  base64Decode(base64Image),
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : const Icon(Icons.fastfood, size: 50),
+        Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text('Stok: $stock', style: TextStyle(fontSize: 16)),
+        IconButton(
+          icon: Icon(Icons.add, size: 30, color: Colors.deepPurple),
+          onPressed: () {
+            addToOrder(id, name, price, stock);
+          },
+        ),
+      ],
+    ),
+  ),
+);
                             },
                           );
                         },
@@ -467,84 +463,97 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                 ),
               ),
               // Order Menu di sebelah kanan
-              Expanded(
-                flex: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  padding: EdgeInsets.all(8),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(top: 10, left: 20),
-                        child: Row(
-                          children: [
-                            Text("Order Menu", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            Spacer(),
-                            IconButton(
-                              icon: Icon(Icons.history, size: 30),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => PesananScreen()),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
+             Expanded(
+  flex: 1,
+  child: Container(
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.8), // Warna latar belakang dengan opasitas
+      borderRadius: BorderRadius.circular(15), // Membulatkan sudut
+      border: Border.all(color: Colors.black, width: 2), // Menambahkan border hitam
+    ),
+    padding: EdgeInsets.all(8),
+    child: Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: 10, left: 20),
+          child: Row(
+            children: [
+              Text("Order Menu", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Spacer(),
+              IconButton(
+                icon: Icon(Icons.history, size: 30),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PesananScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: orderMenu.length,
-                          itemBuilder: (context, index) {
-                            final item = orderMenu[index];
-
-                            return Card(
-                              elevation: 5,
-                              child: ListTile(
-                                title: Text('${item['name']} (x${item['quantity']})'),
-                                subtitle: Text('Rp ${item['price']}'),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.edit, size: 20),
-                                      onPressed: () async {
-                                        final item = orderMenu[index];
-                                        final id = item['id'];
-                                        final name = item['name'];
-                                        final currentQuantity = item['quantity'];
-                                        final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-                                        final docSnapshot = await docRef.get();
-                                        if (docSnapshot.exists) {
-                                          final stock = docSnapshot.data()?['stok'] ?? 0;
-                                          editItemQuantity(id, name, item['price'], currentQuantity, stock);
-                                        }
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: Icon(Icons.remove, size: 20),
-                                      onPressed: () {
-                                        if (item['quantity'] > 1) {
-                                          removeOneItem(item['id'], item['price']);
-                                        }
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: Icon(Icons.delete, size: 20),
-                                      onPressed: () {
-                                        removeItemFromOrder(item['id'], item['quantity']);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+  child: ListView.builder(
+    itemCount: orderMenu.length,
+    itemBuilder: (context, index) {
+      final item = orderMenu[index];
+      return Padding(
+        padding: const EdgeInsets.all(8.0), // Menambahkan padding untuk memastikan border terlihat
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.black, width: 2), // Menambahkan border hitam
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Card(
+            elevation: 5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+              // Tidak perlu border di sini lagi, karena kita menggunakan Container untuk border
+            ),
+            child: ListTile(
+              title: Text('${item['name']} (x${item['quantity']})'),
+              subtitle: Text('Rp ${item['price']}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.edit, size: 20),
+                    onPressed: () async {
+                      final item = orderMenu[index];
+                      final id = item['id'];
+                      final name = item['name'];
+                      final currentQuantity = item['quantity'];
+                      final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+                      final docSnapshot = await docRef.get();
+                      if (docSnapshot.exists) {
+                        final stock = docSnapshot.data()?['stok'] ?? 0;
+                        editItemQuantity(id, name, item['price'], currentQuantity, stock);
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.remove, size: 20),
+                    onPressed: () {
+                      if (item['quantity'] > 1) {
+                        removeOneItem(item['id'], item['price']);
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete, size: 20),
+                    onPressed: () {
+                      removeItemFromOrder(item['id'], item['quantity']);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  ),
+),
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Column(
@@ -559,9 +568,10 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
                                 onPressed: saveOrder,
                                 child: Text('Simpan Pesanan'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.deepPurpleAccent,
-                                  padding: EdgeInsets.symmetric(horizontal: 170, vertical: 10),
+                                  backgroundColor: Color(0xFF003f7f),
+                                  padding: EdgeInsets.symmetric(horizontal: 140, vertical: 20),
                                   textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                  foregroundColor: Colors.white,
                                 ),
                               ),
                             ),

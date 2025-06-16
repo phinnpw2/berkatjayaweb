@@ -23,42 +23,37 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Color(0xFF003f7f).withOpacity(0.8),
         elevation: 0,
         title: Row(
           children: [
             CircleAvatar(
-              radius: 20,
+              radius: 18,
               backgroundImage: AssetImage('assets/profile_pic.png'),
             ),
-            SizedBox(width: 10),
+            SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Hi $username 👋',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
                 ),
                 Text(
                   'Role: $role',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
+                    fontSize: 12,
+                    color: Colors.white,
                   ),
                 ),
               ],
             ),
           ],
         ),
-        actions: [
-          Icon(Icons.search, color: Colors.black),
-          SizedBox(width: 20),
-          Icon(Icons.notifications, color: Colors.black),
-        ],
       ),
       body: Stack(
         children: [
@@ -74,42 +69,55 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Container Selamat Datang
                   Container(
-                    padding: EdgeInsets.all(16.0),
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Color(0xFF003f7f).withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
-                      'Selamat Datang, $username',
+                      'Selamat Datang $username',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 20,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Categories',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  SizedBox(height: 24),
+
+                  // Text TOKO BERKAT JAYA
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 460, vertical: 16),
+                    child: Text(
+                      'TOKO BERKAT JAYA',
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 2),
+                            color: Colors.black54,
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  SizedBox(height: 16),
 
-                  // ✅ GridView FIXED
+                  // GridView dengan penyesuaian lebar kartu
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 60),
                     child: GridView.count(
                       crossAxisCount: 3,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 16, // Atur jarak antar kolom
+                      mainAxisSpacing: 56,  // Atur jarak antar baris
                       physics: NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
-                      childAspectRatio: 1.8,
+                      childAspectRatio: 1.7, // Kecilkan rasio aspek
                       children: categories.map((category) {
                         return CategoryCard(
                           title: category['title'],
@@ -122,29 +130,37 @@ class HomeScreen extends StatelessWidget {
                                 context: context,
                                 builder: (BuildContext context) {
                                   return AlertDialog(
-                                    title: Text('Pilih Mode Kasir'),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    title: Text(
+                                      'Pilih Mode Kasir',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
                                     content: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         ListTile(
+                                          leading: Icon(Icons.payment, color: Color(0xFF003f7f)),
                                           title: Text('Kasir Langsung'),
                                           onTap: () {
+                                            Navigator.pop(context);
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      KasirScreen()),
+                                                  builder: (context) => KasirScreen()),
                                             );
                                           },
                                         ),
                                         ListTile(
+                                          leading: Icon(Icons.receipt_long, color: Color(0xFF003f7f)),
                                           title: Text('Nota Tempo'),
                                           onTap: () {
+                                            Navigator.pop(context);
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      NotaTempoScreen()),
+                                                  builder: (context) => NotaTempoScreen()),
                                             );
                                           },
                                         ),
@@ -157,16 +173,14 @@ class HomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      StatusNotaTempoScreen(),
+                                  builder: (context) => StatusNotaTempoScreen(),
                                 ),
                               );
                             } else if (title == 'Riwayat Transaksi') {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      RiwayatTransaksiScreen(),
+                                  builder: (context) => RiwayatTransaksiScreen(),
                                 ),
                               );
                             } else if (title == 'Laporan') {
@@ -200,6 +214,7 @@ class HomeScreen extends StatelessWidget {
                       }).toList(),
                     ),
                   ),
+                  SizedBox(height: 20), // Spasi tambahan di bawah
                 ],
               ),
             ),
@@ -224,37 +239,63 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(30),
-      ),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            color: Color(0xFF003f7f),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 120, // Ukuran kartu lebih kecil
+        height: 140, // Sesuaikan tinggi kartu
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(
+          color: Color(0xFF003f7f).withOpacity(0.88), // Latar belakang kotak kategori
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.blueAccent, // Warna border
+            width: 2, // Lebar border
           ),
-          padding: EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(imagePath, height: 60, width: 60),
-              SizedBox(height: 8),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 17,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 6,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Kotak abu-abu di sekitar logo
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3), // Efek transparan pada logo
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
-          ),
+              child: Image.asset(
+                imagePath,
+                height: 50, // Ukuran ikon lebih besar
+                width: 50,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.image_not_supported,
+                    size: 28,
+                    color: Color(0xFF003f7f),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 8),
+            // Judul dengan ukuran font disesuaikan
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16, // Ukuran font judul lebih kecil dan terang
+                color: Colors.white, // Ubah warna teks jadi putih
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
