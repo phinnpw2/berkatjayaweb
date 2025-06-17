@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RiwayatTransaksiScreen extends StatefulWidget {
   @override
@@ -16,97 +15,103 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   DateTime? endDate;
   List<Map<String, dynamic>> transactions = [];
   TextEditingController searchController = TextEditingController();
-  bool _isLoading = false; // Untuk menampilkan spinner saat menghapus transaksi
 
-  Future<void> loadTransactionsFromPrefs() async {
+  // Fungsi untuk memuat transaksi dari Firestore
+  Future<void> loadTransactionsFromFirestore() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-
-      // Ambil transaksi dari Firestore
-      final snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi').get();
-      List<Map<String, dynamic>> loadedTransactions = transactionStrings
-          .map((e) => Map<String, dynamic>.from(json.decode(e)))
-          .toList();
-
+      var snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi').get();
+      List<Map<String, dynamic>> loadedTransactions = [];
       snapshot.docs.forEach((doc) {
-        Map<String, dynamic> transactionData = doc.data() as Map<String, dynamic>;
-
-        if (transactionData['keterangan'] == 'notatempo') {
-          bool isDuplicate = loadedTransactions.any((existingTransaction) =>
-              existingTransaction['invoiceNumber'] == transactionData['invoiceNumber'] &&
-              existingTransaction['customerName'] == transactionData['customerName'] &&
-              existingTransaction['keterangan'] != 'notatempo');
-          if (!isDuplicate) {
-            loadedTransactions.add(transactionData);
-          }
-        } else {
-          loadedTransactions.add(transactionData);
-        }
+        Map<String, dynamic> transaction = doc.data();
+        loadedTransactions.add(transaction);
       });
-
       setState(() {
-        transactions = loadedTransactions;
+        transactions = loadedTransactions; // Menyimpan transaksi yang diambil dari Firestore
       });
     } catch (e) {
-      print("Error loading transactions: $e");
+      print("Error loading transactions from Firestore: $e");
     }
   }
 
-  Future<void> deleteTransaction(int index) async {
+  // Fungsi untuk memuat transaksi dari SharedPreferences
+  Future<void> loadTransactionsFromSharedPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
+    List<Map<String, dynamic>> loadedTransactions = [];
+
+    for (var transactionString in transactionStrings) {
+      Map<String, dynamic> transaction = json.decode(transactionString);
+      loadedTransactions.add(transaction);
+    }
+
     setState(() {
-      _isLoading = true; // Tampilkan spinner saat menghapus
+      transactions = loadedTransactions;
+    });
+  }
+
+  // Fungsi untuk menyimpan transaksi ke SharedPreferences
+  Future<void> saveTransactionToSharedPreferences(Map<String, dynamic> transaction) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
+    String transactionString = json.encode(transaction);
+    transactionStrings.add(transactionString);
+
+    await prefs.setStringList('transactions', transactionStrings);
+  }
+
+  // Fungsi untuk menghapus transaksi dari Firestore
+  Future<void> deleteTransactionFromFirestore(String invoiceNumber) async {
+    try {
+      var querySnapshot = await FirebaseFirestore.instance
+          .collection('riwayattransaksi')
+          .where('invoiceNumber', isEqualTo: invoiceNumber)
+          .get();
+
+      for (var doc in querySnapshot.docs) {
+        await doc.reference.delete(); // Menghapus dokumen dari Firestore
+      }
+
+      // Tampilkan notifikasi sukses
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil dihapus dari Firestore!')));
+    } catch (e) {
+      print("Error deleting transaction from Firestore: $e");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus transaksi dari Firestore!')));
+    }
+  }
+
+  // Fungsi untuk menghapus transaksi dari SharedPreferences
+  Future<void> deleteTransaction(String invoiceNumber) async {
+    setState(() {
+      // Tampilkan indikator pemuatan sementara
     });
 
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-      String deletedTransactionJson = transactionStrings.removeAt(index); // Menghapus transaksi dari daftar
-
-      // Update SharedPreferences setelah menghapus transaksi
+      transactionStrings.removeWhere((transactionJson) {
+        final transaction = json.decode(transactionJson);
+        return transaction['invoiceNumber'] == invoiceNumber; // Menghapus transaksi berdasarkan invoiceNumber
+      });
       await prefs.setStringList('transactions', transactionStrings);
 
-      // Parse data transaksi yang dihapus
-      Map<String, dynamic> deletedTransaction = json.decode(deletedTransactionJson);
+      // Menghapus transaksi dari Firestore
+      await deleteTransactionFromFirestore(invoiceNumber);
 
-      // Mendapatkan nama pelanggan dari transaksi yang dihapus
-      String customerName = deletedTransaction['customerName'] ?? ''; // Pastikan ada nama pelanggan
-
-      if (customerName.isNotEmpty) {
-        // Hapus transaksi dari Firestore berdasarkan customerName
-        var snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi')
-            .where('customerName', isEqualTo: customerName)
-            .get();
-
-        if (snapshot.docs.isEmpty) {
-          print("Tidak ada transaksi untuk pelanggan $customerName.");
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi untuk pelanggan ini')));
-        } else {
-          // Menghapus transaksi berdasarkan customerName
-          for (var doc in snapshot.docs) {
-            await doc.reference.delete();
-            print("Transaksi dengan pelanggan $customerName berhasil dihapus.");
-          }
-        }
-      }
-
-      // Reload transaksi setelah penghapusan
-      loadTransactionsFromPrefs();
+      // Tampilkan notifikasi sukses
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil dihapus')));
+
+      // Memuat ulang transaksi setelah penghapusan
+      loadTransactionsFromSharedPreferences(); // Memuat transaksi setelah penghapusan
     } catch (e) {
       print("Error deleting transaction: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus transaksi')));
-    } finally {
-      setState(() {
-        _isLoading = false; // Sembunyikan spinner setelah proses selesai
-      });
     }
   }
 
   @override
   void initState() {
     super.initState();
-    loadTransactionsFromPrefs();
+    loadTransactionsFromFirestore(); // Memuat data transaksi dari Firestore
     searchController.addListener(() {
       setState(() {
         searchQuery = searchController.text.toLowerCase();
@@ -119,13 +124,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Riwayat Transaksi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Color(0xFF003f7f), // Updated to your color
+        backgroundColor: Color(0xFF003f7f),
         elevation: 0,
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+      body: transactions.isEmpty
+          ? Center(child: Text('Tidak ada transaksi untuk ditampilkan.')) // Pesan ketika tidak ada transaksi
           : Column(
               children: [
+                // Search Field
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextField(
@@ -135,10 +141,8 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                         searchQuery = query.toLowerCase();
                       });
                     },
-                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
                       labelText: 'Cari Nama Pelanggan',
-                      labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                       prefixIcon: Icon(Icons.search, color: Colors.black),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
@@ -147,17 +151,12 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                     ),
                   ),
                 ),
+                // Date Selector
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
                       onPressed: () => selectStartDate(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF003f7f),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
                       child: Text(
                         startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!),
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -166,12 +165,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                     SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: () => selectEndDate(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF003f7f),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
                       child: Text(
                         endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!),
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -179,12 +172,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                     ),
                   ],
                 ),
+                // ListView untuk menampilkan transaksi
                 Expanded(
                   child: ListView.builder(
                     itemCount: transactions.length,
                     itemBuilder: (context, index) {
                       var transaction = transactions[index];
 
+                      // Filter transaksi berdasarkan pencarian nama pelanggan
                       if (!transaction['customerName']
                           .toLowerCase()
                           .contains(searchQuery)) {
@@ -203,9 +198,9 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Metode Pembayaran: ${transaction['paymentMethod']}'),
+                                      Text('Metode Pembayaran: ${transaction['paymentMethod']?.toString() ?? 'Tidak ada metode'}'),
                                       SizedBox(height: 10),
-                                      Text("Total Harga : ${transaction['totalAmount'] ?? 'Tidak ada total'}"),
+                                      Text("Total Harga : ${transaction['totalAmount']?.toString() ?? 'Tidak ada total'}"),
                                       SizedBox(height: 10),
                                       Text('Rincian Produk:'),
                                       SizedBox(height: 10),
@@ -224,7 +219,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      product['name'],
+                                                      product['name']?.toString() ?? 'Nama Produk Tidak Tersedia',
                                                       style: TextStyle(fontWeight: FontWeight.bold),
                                                     ),
                                                     SizedBox(height: 5),
@@ -266,23 +261,17 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Nomor Nota: ${transaction['invoiceNumber'] ?? 'N/A'}',
+                                    'Nomor Nota: ${transaction['invoiceNumber']?.toString() ?? 'N/A'}',
                                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                                   SizedBox(height: 5),
-                                  Text('Pelanggan: ${transaction['customerName']}'),
+                                  Text('Pelanggan: ${transaction['customerName']?.toString() ?? 'Tidak Ada Nama'}'),
                                   SizedBox(height: 5),
                                   Text('Tanggal: ${transaction['date'] != null ? DateFormat('yyyy-MM-dd').format(DateTime.parse(transaction['date'])) : 'Tidak ada tanggal'}'),
                                   SizedBox(height: 5),
-                                  Text('Total: Rp ${transaction['totalAmount'] ?? '0.0'}'),
+                                  Text('Total: Rp ${transaction['totalAmount']?.toString() ?? '0.0'}'),
                                   SizedBox(height: 5),
-                                  Text('Pengembalian: Rp ${transaction['change'] ?? '0.0'}'),
-                                  SizedBox(height: 5),
-                                  if (transaction['keterangan'] != null && transaction['keterangan'] == 'notatempo')
-                                    Text(
-                                      'Keterangan: Nota Tempo',
-                                      style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic),
-                                    ),
+                                  Text('Pengembalian: Rp ${transaction['change']?.toString() ?? '0.0'}'),
                                   SizedBox(height: 5),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
@@ -305,7 +294,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                                 TextButton(
                                                   onPressed: () {
                                                     Navigator.pop(context);
-                                                    deleteTransaction(index); // Menghapus transaksi berdasarkan indeks
+                                                    deleteTransaction(transaction['invoiceNumber']); // Menghapus transaksi berdasarkan invoiceNumber
                                                   },
                                                   child: Text('Hapus'),
                                                 ),

@@ -29,35 +29,41 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
 
   // Fungsi untuk menambah produk ke dalam order menu
   void addToOrder(String id, String name, double price, int stock) async {
-    if (stock > 0) {
-      setState(() {
-        bool itemExists = false;
-        for (var item in orderMenu) {
-          if (item['id'] == id) {
-            item['quantity']++;
-            itemExists = true;
-            break;
-          }
-        }
-        if (!itemExists) {
-          orderMenu.add({'id': id, 'name': name, 'price': price, 'quantity': 1});
-        }
-      });
-
-      // Update stok di Firestore
-      final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-      final docSnapshot = await docRef.get();
-      if (docSnapshot.exists) {
-        final currentStock = docSnapshot.data()?['stok'] ?? 0;
-        if (currentStock > 0) {
-          docRef.update({'stok': currentStock - 1});
+  if (stock > 0) {
+    setState(() {
+      bool itemExists = false;
+      for (var item in orderMenu) {
+        if (item['id'] == id) {
+          item['quantity']++;
+          item['totalPrice'] = item['price'] * item['quantity']; // Update totalPrice sesuai quantity
+          itemExists = true;
+          break;
         }
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
-    }
-  }
+      if (!itemExists) {
+        orderMenu.add({
+          'id': id,
+          'name': name,
+          'price': price,
+          'quantity': 1,
+          'totalPrice': price, // Set totalPrice saat pertama kali ditambahkan
+        });
+      }
+    });
 
+    // Update stok di Firestore
+    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+    final docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      final currentStock = docSnapshot.data()?['stok'] ?? 0;
+      if (currentStock > 0) {
+        docRef.update({'stok': currentStock - 1});
+      }
+    }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
+  }
+}
   // Fungsi untuk mengedit jumlah produk dalam order menu
   void editItemQuantity(String id, String name, double price, int currentQuantity, int stock) async {
     int availableStock = stock + currentQuantity; // Stok yang tersedia adalah stok saat ini ditambah dengan jumlah yang sudah ada di order menu
@@ -512,7 +518,7 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
             ),
             child: ListTile(
               title: Text('${item['name']} (x${item['quantity']})'),
-              subtitle: Text('Rp ${item['price']}'),
+              subtitle: Text('Rp ${item['totalPrice']}'),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

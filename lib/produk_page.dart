@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:convert';
+import 'package:berkatjaya_web/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,6 +25,7 @@ class _ProdukPageState extends State<ProdukPage> {
   String? _base64Image;
   bool _isLoading = false;
 
+  // Fungsi untuk memilih gambar
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -35,6 +37,7 @@ class _ProdukPageState extends State<ProdukPage> {
     }
   }
 
+  // Fungsi untuk menambahkan produk
   Future<void> _tambahProduk() async {
     final nama = _namaController.text.trim();
     final stok = int.tryParse(_stokController.text) ?? -1;
@@ -49,28 +52,37 @@ class _ProdukPageState extends State<ProdukPage> {
 
     setState(() => _isLoading = true);
 
-    await FirebaseFirestore.instance.collection('produk').add({
-      'nama': nama,
-      'stok': stok,
-      'harga': harga,
-      'kategori': _kategoriAktif,
-      'gambar': _base64Image ?? '',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    try {
+      await FirebaseFirestore.instance.collection('produk').add({
+        'nama': nama,
+        'stok': stok,
+        'harga': harga,
+        'kategori': _kategoriAktif,
+        'gambar': _base64Image ?? '',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-    _namaController.clear();
-    _stokController.clear();
-    _hargaController.clear();
-    setState(() {
-      _base64Image = null;
-      _isLoading = false;
-    });
+      // Reset form
+      _namaController.clear();
+      _stokController.clear();
+      _hargaController.clear();
+      setState(() {
+        _base64Image = null;
+        _isLoading = false;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Produk berhasil ditambahkan!')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Produk berhasil ditambahkan!')),
+      );
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Terjadi kesalahan, coba lagi!')),
+      );
+    }
   }
 
+  // Fungsi untuk mengedit produk
   Future<void> _editProduk(String id, String nama, int stok, int harga) async {
     _namaController.text = nama;
     _stokController.text = stok.toString();
@@ -81,10 +93,7 @@ class _ProdukPageState extends State<ProdukPage> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       isScrollControlled: true,
       builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16, right: 16, top: 24,
-        ),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -136,6 +145,7 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
+  // Fungsi untuk menghapus produk
   Future<void> _hapusProduk(String id, String nama) async {
     showDialog(
       context: context,
@@ -172,7 +182,18 @@ class _ProdukPageState extends State<ProdukPage> {
                 AppBar(
                   title: const Text("Stok Produk", style: TextStyle(color: Colors.white)),
                   backgroundColor: const Color(0xFF003366),
-                  centerTitle: true,
+                 
+                  elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: Colors.white,
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')),
+            );
+          },
+        ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(12),
@@ -278,6 +299,7 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
+  // Widget untuk menampilkan produk dalam bentuk GridView
   Widget _buildProdukList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -313,9 +335,9 @@ class _ProdukPageState extends State<ProdukPage> {
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final data = docs[index].data() as Map<String, dynamic>;
-            final nama = data['nama'] ?? '-';
+            final nama = data['nama'] ?? 'tidak tersedia';
             final stok = data['stok'] ?? 0;
-            final harga = data['harga'] ?? 0;
+            final harga = data['harga'] ?? 0.0;
             final img = data['gambar'] ?? '';
             return Material(
               color: Colors.white,
@@ -358,6 +380,7 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
+  // Menampilkan bottom sheet untuk tambah produk
   void _showTambahProdukBottomSheet() {
     showModalBottomSheet(
       context: context,

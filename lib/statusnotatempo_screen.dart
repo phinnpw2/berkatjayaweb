@@ -126,6 +126,7 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
+          color: Colors.white,
           onPressed: () {
             Navigator.pop(context);
           },
@@ -235,16 +236,16 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                               SizedBox(height: 10),
-                              Text('Total: Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, color: Colors.green)),
+                              Text('Total: Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
                               SizedBox(height: 10),
                               Text(
                                 'Status: $status',
-                                style: TextStyle(fontSize: 14, color: Colors.red, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
                               ),
                               SizedBox(height: 10),
                               Text(
                                 'Keterangan: $keterangan',
-                                style: TextStyle(fontSize: 12, color: Colors.blueAccent),
+                                style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
                               ),
                               SizedBox(height: 10),
                               ElevatedButton(
@@ -254,7 +255,8 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
                                 child: Text('Konfirmasi Pembayaran'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF003f7f),
-                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                                  color: Colors.white),
                                 ),
                               ),
                             ],

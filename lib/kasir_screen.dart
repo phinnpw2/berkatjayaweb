@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'pembayaran_screen.dart';
 import 'riwayattransaksi_screen.dart';
 import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -32,22 +33,35 @@ class _KasirScreenState extends State<KasirScreen> {
 
   // Fungsi untuk menghasilkan nomor nota yang berurutan
   Future<void> generateInvoiceNumber() async {
-    final counterDoc = await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').get();
+    final prefs = await SharedPreferences.getInstance();
+    String? savedInvoiceNumber = prefs.getString('invoiceNumber');
 
-    int counter = 1;
-    if (counterDoc.exists) {
-      counter = counterDoc.data()?['counter'] ?? 1;
+    if (savedInvoiceNumber == null) {
+      // Jika nomor invoice belum ada (artinya transaksi belum dimulai)
+      final counterDoc = await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').get();
+      int counter = 1;
+      if (counterDoc.exists) {
+        counter = counterDoc.data()?['counter'] ?? 1;
+      }
+
+      // Membuat nomor nota dengan format INV001, INV002, dll
+      setState(() {
+        invoiceNumber = 'INV${counter.toString().padLeft(3, '0')}';
+      });
+
+      // Simpan nomor invoice di SharedPreferences
+      await prefs.setString('invoiceNumber', invoiceNumber!);
+
+      // Increment counter untuk nomor nota berikutnya
+      await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').set({
+        'counter': counter + 1,
+      });
+    } else {
+      // Jika nomor invoice sudah ada, gunakan nomor invoice yang sudah disimpan
+      setState(() {
+        invoiceNumber = savedInvoiceNumber;
+      });
     }
-
-    // Membuat nomor nota dengan format INV001, INV002, dll
-    setState(() {
-      invoiceNumber = 'INV${counter.toString().padLeft(3, '0')}';
-    });
-
-    // Increment counter untuk nomor nota berikutnya
-    await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').set({
-      'counter': counter + 1,
-    });
   }
 
   @override
@@ -56,41 +70,54 @@ class _KasirScreenState extends State<KasirScreen> {
     generateInvoiceNumber();  // Menghasilkan nomor invoice pada saat awal
   }
 
+  // Fungsi untuk menambahkan produk ke dalam order menu
   void addToOrder(String id, String name, double price, int stock) async {
-  if (stock > 0) {
-    setState(() {
-      bool itemExists = false;
-      for (var item in orderMenu) {
-        if (item['id'] == id) {
-          item['quantity']++;
-          itemExists = true;
-          break;
+    if (stock > 0) {
+      setState(() {
+        bool itemExists = false;
+        for (var item in orderMenu) {
+          if (item['id'] == id) {
+            item['quantity']++;  // Increment quantity
+            item['totalPrice'] = item['price'] * item['quantity']; // Update totalPrice
+            item['displayPrice'] = item['price'] * item['quantity'];  // Update displayed price below name
+            itemExists = true;
+            break;
+          }
+        }
+        if (!itemExists) {
+          orderMenu.add({
+            'id': id,
+            'name': name,
+            'price': price,
+            'quantity': 1,
+            'totalPrice': price * 1, // Set totalPrice when first added
+            'displayPrice': price,  // Price displayed under the name
+          });
+        }
+      });
+
+      // Update stock in Firestore
+      final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
+      final docSnapshot = await docRef.get();
+      if (docSnapshot.exists) {
+        final currentStock = docSnapshot.data()?['stok'] ?? 0;
+        if (currentStock > 0) {
+          docRef.update({'stok': currentStock - 1});
         }
       }
-      if (!itemExists) {
-        orderMenu.add({'id': id, 'name': name, 'price': price, 'quantity': 1});
-      }
-    });
-
-    final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
-    final docSnapshot = await docRef.get();
-    if (docSnapshot.exists) {
-      final currentStock = docSnapshot.data()?['stok'] ?? 0;
-      if (currentStock > 0) {
-        docRef.update({'stok': currentStock - 1});
-      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
     }
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok tidak cukup!')));
   }
-}
 
-
+  // Fungsi untuk mengurangi kuantitas produk
   void removeOneItem(String id, double price) async {
     setState(() {
       for (var item in orderMenu) {
         if (item['id'] == id && item['quantity'] > 1) {
           item['quantity']--;
+          item['totalPrice'] = item['price'] * item['quantity']; // Update totalPrice
+          item['displayPrice'] = item['price'] * item['quantity']; // Update displayed price under name
           break;
         }
       }
@@ -104,6 +131,7 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
+  // Fungsi untuk menghapus produk dari order menu
   void removeItemFromOrder(String id, int quantity) async {
     setState(() {
       orderMenu.removeWhere((item) => item['id'] == id);
@@ -117,14 +145,16 @@ class _KasirScreenState extends State<KasirScreen> {
     }
   }
 
+  // Menghitung total harga
   double get totalCharge {
     double total = 0;
     for (var item in orderMenu) {
-      total += item['price'] * item['quantity'];
+      total += item['totalPrice']; // Use totalPrice for each item
     }
     return total;
   }
 
+  // Fungsi untuk mengedit kuantitas produk
   void editItemQuantity(String id, String name, double price, int currentQuantity, int stock) async {
     int availableStock = stock + currentQuantity;
 
@@ -157,6 +187,8 @@ class _KasirScreenState extends State<KasirScreen> {
                     for (var item in orderMenu) {
                       if (item['id'] == id) {
                         item['quantity'] = updatedQuantity;
+                        item['totalPrice'] = item['price'] * updatedQuantity; // Update totalPrice
+                        item['displayPrice'] = item['price'] * updatedQuantity; // Update displayed price below name
                         break;
                       }
                     }
@@ -193,48 +225,60 @@ class _KasirScreenState extends State<KasirScreen> {
     );
   }
 
+  // Fungsi untuk menangani pembayaran
   void handlePayment() async {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
     } else {
       // Kirim transaksi ke halaman pembayaran dengan nomor nota yang terurut
-      Navigator.push(
+      bool paymentSuccessful = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PembayaranScreen(orderMenu: orderMenu, invoiceNumber: invoiceNumber!),
+          builder: (context) => PembayaranScreen(orderMenu: orderMenu, invoiceNumber: invoiceNumber),
         ),
       );
+
+      // Jika pembayaran dibatalkan atau tidak jadi, nomor invoice tetap tidak bertambah
+      if (!paymentSuccessful) {
+        setState(() {
+          // Jika pembayaran tidak berhasil, nomor invoice tetap tidak bertambah
+        });
+      }
     }
   }
 
-  void startNewTransaction() {
+  // Fungsi untuk memulai transaksi baru
+  void startNewTransaction() async {
     setState(() {
       orderMenu.clear();
     });
+
+    final prefs = await SharedPreferences.getInstance();
+    // Reset invoice number on new transaction
+    await prefs.remove('invoiceNumber'); // Hapus nomor invoice yang lama jika transaksi baru dimulai
+    generateInvoiceNumber(); // Generate nomor invoice baru
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-  title: Text('Kasir Penjualan', style: TextStyle(
-    color: Colors.white,
-    fontWeight: FontWeight.bold)),
-  backgroundColor: Color(0xFF003f7f), // Latar belakang biru solid pada AppBar
-  elevation: 0,
-  leading: IconButton(
-    icon: Icon(Icons.arrow_back),
-    color: Colors.white,
-    onPressed: () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')),
-      );
-    },
-  ),
-),
+        title: Text('Kasir Penjualan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Color(0xFF003f7f),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: Colors.white,
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')),
+            );
+          },
+        ),
+      ),
       body: Stack(
-        children: [                         
+        children: [
           Row(
             children: [
               Expanded(
@@ -266,9 +310,7 @@ class _KasirScreenState extends State<KasirScreen> {
                                   },
                                 ),
                                 Icon(
-                                  isDropdownVisible
-                                      ? Icons.arrow_drop_up
-                                      : Icons.arrow_drop_down,
+                                  isDropdownVisible ? Icons.arrow_drop_up : Icons.arrow_drop_down,
                                   size: 24,
                                 ),
                               ],
@@ -365,48 +407,47 @@ class _KasirScreenState extends State<KasirScreen> {
                               final base64Image = data['gambar'] ?? '';
 
                               return GestureDetector(
-  onTap: () {
-    setState(() {
-      selectedProductId = id; 
-    });
-  },
-  child: Card(
-    elevation: 5,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(15),
-      side: BorderSide(color: Colors.black, width: 2), // Menambahkan border hitam
-    ),
-    color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white, 
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        base64Image.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(60),
-                child: Image.memory(
-                  base64Decode(base64Image),
-                  width: 135,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : const Icon(Icons.fastfood, size: 80),
-        Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        Text('Stok: $stock', style: TextStyle(fontSize: 14)),
-         Text('Rp $price', style: TextStyle(fontSize: 14,)),
-        IconButton(
-          icon: Icon(Icons.add, size: 26, color: Colors.deepPurple),
-          onPressed: () {
-            addToOrder(id, name, price, stock);
-          },
-        ),
-      ],
-    ),
-  ),
-);
-                            }
+                                onTap: () {
+                                  setState(() {
+                                    selectedProductId = id;
+                                  });
+                                },
+                                child: Card(
+                                  elevation: 5,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                    side: BorderSide(color: Colors.black, width: 2),
+                                  ),
+                                  color: selectedProductId == id ? Colors.deepPurple[200] : Colors.white,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      base64Image.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius: BorderRadius.circular(60),
+                                              child: Image.memory(
+                                                base64Decode(base64Image),
+                                                width: 135,
+                                                height: 80,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            )
+                                          : const Icon(Icons.fastfood, size: 80),
+                                      Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      Text('Stok: $stock', style: TextStyle(fontSize: 14)),
+                                      Text('Rp $price', style: TextStyle(fontSize: 14)),
+                                      IconButton(
+                                        icon: Icon(Icons.add, size: 26, color: Colors.deepPurple),
+                                        onPressed: () {
+                                          addToOrder(id, name, price, stock);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           );
-                        
                         },
                       ),
                     ),
@@ -414,73 +455,74 @@ class _KasirScreenState extends State<KasirScreen> {
                 ),
               ),
               Expanded(
-  flex: 1,
-  child: Container(
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.8), // Warna latar belakang dengan opasitas
-      borderRadius: BorderRadius.circular(15), // Membulatkan sudut
-      border: Border.all(color: Colors.black, width: 2), // Menambahkan border hitam
-    ),
-    padding: EdgeInsets.all(8),
-    child: Column(
-      children: [
-        Padding(
-          padding: EdgeInsets.only(top: 10, left: 20),
-          child: Row(
-            children: [
-              Text("Order Menu", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Spacer(),
-              IconButton(
-                icon: Icon(Icons.history, size: 30),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => RiwayatTransaksiScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+                flex: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  padding: EdgeInsets.all(8),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(top: 10, left: 20),
+                        child: Row(
+                          children: [
+                            Text("Order Menu", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            Spacer(),
+                            IconButton(
+                              icon: Icon(Icons.history, size: 30),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => RiwayatTransaksiScreen()),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                       Expanded(
-  child: ListView.builder(
-    itemCount: orderMenu.length,
-    itemBuilder: (context, index) {
-      final item = orderMenu[index];
-      return Padding(
-        padding: const EdgeInsets.all(8.0), // Menambahkan padding untuk memastikan border terlihat
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.black, width: 2), // Menambahkan border hitam
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Card(
-            elevation: 5,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-              // Tidak perlu border di sini lagi, karena kita menggunakan Container untuk border
-            ),
-            child: ListTile(
-              title: Text('${item['name']} (x${item['quantity']})'),
-              subtitle: Text('Rp ${item['price']}'),
-              trailing: Row(
+                        child: ListView.builder(
+                          itemCount: orderMenu.length,
+                          itemBuilder: (context, index) {
+                            final item = orderMenu[index];
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.black, width: 2),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Card(
+                                  elevation: 5,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: ListTile(
+                                    title: Text('${item['name']} (x${item['quantity']})'),
+                                    subtitle: Text('Rp ${item['totalPrice']}'),
+                                  trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Button Edit
                   IconButton(
                     icon: Icon(Icons.edit, size: 20),
                     onPressed: () async {
-                      final item = orderMenu[index];
                       final id = item['id'];
                       final name = item['name'];
                       final currentQuantity = item['quantity'];
+                      final price = item['price'];
                       final docRef = FirebaseFirestore.instance.collection('produk').doc(id);
                       final docSnapshot = await docRef.get();
                       if (docSnapshot.exists) {
                         final stock = docSnapshot.data()?['stok'] ?? 0;
-                        editItemQuantity(id, name, item['price'], currentQuantity, stock);
+                        editItemQuantity(id, name, price, currentQuantity, stock);
                       }
                     },
                   ),
+                  // Button Remove One Item
                   IconButton(
                     icon: Icon(Icons.remove, size: 20),
                     onPressed: () {
@@ -489,6 +531,7 @@ class _KasirScreenState extends State<KasirScreen> {
                       }
                     },
                   ),
+                  // Button Delete
                   IconButton(
                     icon: Icon(Icons.delete, size: 20),
                     onPressed: () {
@@ -504,7 +547,6 @@ class _KasirScreenState extends State<KasirScreen> {
     },
   ),
 ),
-
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Column(
@@ -521,8 +563,7 @@ class _KasirScreenState extends State<KasirScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF003f7f),
                                   padding: EdgeInsets.symmetric(horizontal: 150, vertical: 20),
-                                  textStyle: TextStyle(fontSize: 17, 
-                                  fontWeight: FontWeight.bold),
+                                  textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                                   foregroundColor: Colors.white,
                                 ),
                               ),

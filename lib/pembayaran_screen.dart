@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:berkatjaya_web/cetaknota_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PembayaranScreen extends StatefulWidget {
   final List<Map<String, dynamic>> orderMenu;
-  final String invoiceNumber; // Menerima parameter invoiceNumber
+  final String? invoiceNumber;  // Menerima invoiceNumber dari KasirScreen
 
-  PembayaranScreen({required this.orderMenu, required this.invoiceNumber}); // Constructor menerima invoiceNumber
+  PembayaranScreen({required this.orderMenu, this.invoiceNumber}); // Tambahkan invoiceNumber ke konstruktor
 
   @override
   _PembayaranScreenState createState() => _PembayaranScreenState();
@@ -17,6 +18,7 @@ class PembayaranScreen extends StatefulWidget {
 
 class _PembayaranScreenState extends State<PembayaranScreen> {
   late double totalAmount;
+  late String invoiceNumber; // Deklarasikan invoiceNumber di sini
   TextEditingController amountPaidController = TextEditingController();
   TextEditingController customerNameController = TextEditingController();
   double change = 0.0;
@@ -26,6 +28,13 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
   void initState() {
     super.initState();
     totalAmount = widget.orderMenu.fold(0, (sum, item) => sum + (item['price'] * item['quantity']));
+    invoiceNumber = widget.invoiceNumber ?? _generateInvoiceNumber(); // Gunakan invoiceNumber dari KasirScreen atau buat baru
+  }
+
+  // Fungsi untuk menghasilkan nomor invoice yang unik
+  String _generateInvoiceNumber() {
+    String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    return 'INV-$timestamp'; // Format Invoice yang mencakup waktu
   }
 
   void calculateChange() {
@@ -44,22 +53,45 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     return amountPaid >= totalAmount;
   }
 
+  // Fungsi untuk menyimpan transaksi ke SharedPreferences
   Future<void> saveTransactionToSharedPreferences() async {
     Map<String, dynamic> transaction = {
       'customerName': customerNameController.text,
       'orderDetails': widget.orderMenu,
       'totalAmount': totalAmount,
-      'paymentMethod': paymentMethod,
+      'paymentMethod': paymentMethod, // Menyimpan metode pembayaran
       'change': change,
       'status_transaksi': 'selesai',
       'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      'invoiceNumber': widget.invoiceNumber, // Menyimpan nomor invoice
+      'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
     };
 
     final prefs = await SharedPreferences.getInstance();
     List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-    transactionStrings.add(json.encode(transaction)); 
-    await prefs.setStringList('transactions', transactionStrings);
+    transactionStrings.add(json.encode(transaction)); // Menyimpan transaksi yang sudah di-encode
+    await prefs.setStringList('transactions', transactionStrings); // Menyimpan list transaksi ke SharedPreferences
+  }
+
+  // Fungsi untuk menyimpan transaksi ke Firestore
+  Future<void> saveTransactionToFirestore() async {
+    Map<String, dynamic> transaction = {
+      'customerName': customerNameController.text,
+      'orderDetails': widget.orderMenu,
+      'totalAmount': totalAmount,
+      'paymentMethod': paymentMethod, // Menyimpan metode pembayaran
+      'change': change,
+      'status_transaksi': 'selesai',
+      'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+      'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
+    };
+
+    try {
+      await FirebaseFirestore.instance.collection('riwayattransaksi').add(transaction);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil disimpan di Firestore!')));
+    } catch (e) {
+      print("Error saving transaction to Firestore: $e");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan transaksi di Firestore!')));
+    }
   }
 
   @override
@@ -120,7 +152,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                     children: [
                       // Menampilkan nomor nota di atas nama pelanggan
                       Text(
-                        'Nomor Nota: ${widget.invoiceNumber}', // Menampilkan nomor nota
+                        'Nomor Nota: $invoiceNumber', // Menampilkan nomor nota yang baru dihitung
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 20),
@@ -190,7 +222,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                         value: paymentMethod,
                         onChanged: (String? newValue) {
                           setState(() {
-                            paymentMethod = newValue!;
+                            paymentMethod = newValue!; // Menyimpan metode pembayaran yang dipilih
                           });
                         },
                         items: <String>['Cash', 'Transfer BCA', 'Transfer BRI', 'Transfer Mandiri']
@@ -214,6 +246,9 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pembayaran Berhasil!')));
                               });
 
+                              // Panggil fungsi untuk menyimpan transaksi ke Firestore
+                              saveTransactionToFirestore();
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -223,7 +258,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                                     change: change,
                                     paymentMethod: paymentMethod,
                                     customerName: customerNameController.text,
-                                    invoiceNumber: widget.invoiceNumber, // Pastikan invoiceNumber dikirimkan ke CetakNotaScreen
+                                    invoiceNumber: invoiceNumber, // Pastikan invoiceNumber dikirimkan ke CetakNotaScreen
                                   ),
                                 ),
                               );

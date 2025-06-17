@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LaporanScreen extends StatefulWidget {
   @override
@@ -16,26 +15,40 @@ class _LaporanScreenState extends State<LaporanScreen> {
   @override
   void initState() {
     super.initState();
-    loadTransactionsFromPrefs(); // Memuat transaksi saat inisialisasi
+    loadTransactionsFromFirestore(); // Memuat transaksi langsung dari Firestore
   }
 
-  // Fungsi untuk memuat transaksi dari SharedPreferences
-  Future<void> loadTransactionsFromPrefs() async {
+  // Fungsi untuk memuat transaksi dari Firestore
+  Future<void> loadTransactionsFromFirestore() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-      List<Map<String, dynamic>> loadedTransactions = transactionStrings
-          .map((e) => Map<String, dynamic>.from(json.decode(e)))
-          .toList();
+      // Ambil transaksi dari Firestore
+      final snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi').get();
+      List<Map<String, dynamic>> loadedTransactions = [];
+
+      snapshot.docs.forEach((doc) {
+        Map<String, dynamic> transactionData = doc.data() as Map<String, dynamic>;
+
+        // Tambahkan transaksi hanya jika belum ada duplikasi
+        bool isDuplicate = loadedTransactions.any((existingTransaction) =>
+            existingTransaction['invoiceNumber'] == transactionData['invoiceNumber']);
+        
+        if (!isDuplicate) {
+          loadedTransactions.add(transactionData);
+        }
+      });
+
       setState(() {
         transactions = loadedTransactions;
       });
-      generateReport(); // Panggil generateReport setelah transaksi dimuat
+
+      // Hitung total transaksi
+      generateReport();
     } catch (e) {
       print("Error loading transactions: $e");
     }
   }
 
+  // Fungsi untuk menghitung total transaksi
   void generateReport() {
     double total = 0;
 
@@ -52,17 +65,18 @@ class _LaporanScreenState extends State<LaporanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Laporan Transaksi'),
-        backgroundColor: Colors.deepPurpleAccent,
+        title: Text('Laporan Transaksi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Color(0xFF003f7f), // Sesuaikan dengan warna Riwayat Transaksi
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Laporan Transaksi - Total (memanjang)
+            // Laporan Transaksi - Total
             _buildLaporanTransaksi(),
 
-            // Laporan Nota (Detail Transaksi) menggunakan Tabel
+            // Laporan Nota (Detail Transaksi) dalam bentuk Tabel
             _buildLaporanNota(),
           ],
         ),
@@ -70,10 +84,10 @@ class _LaporanScreenState extends State<LaporanScreen> {
     );
   }
 
-  // Laporan Transaksi
+  // Laporan Transaksi - Total
   Widget _buildLaporanTransaksi() {
     return Container(
-      width: double.infinity,  // Membuat lebar memanjang
+      width: double.infinity,
       padding: EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.blueGrey.shade50,
@@ -97,7 +111,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
     );
   }
 
-  // Laporan Nota (Detail Transaksi) dalam bentuk tabel
+  // Laporan Nota (Detail Transaksi) dalam bentuk Tabel
   Widget _buildLaporanNota() {
     return Container(
       margin: EdgeInsets.only(top: 20),
