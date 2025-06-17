@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
+import 'package:berkatjaya_web/kasir_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -53,25 +54,6 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
     return amountPaid >= totalAmount;
   }
 
-  // Fungsi untuk menyimpan transaksi ke SharedPreferences
-  Future<void> saveTransactionToSharedPreferences() async {
-    Map<String, dynamic> transaction = {
-      'customerName': customerNameController.text,
-      'orderDetails': widget.orderMenu,
-      'totalAmount': totalAmount,
-      'paymentMethod': paymentMethod, // Menyimpan metode pembayaran
-      'change': change,
-      'status_transaksi': 'selesai',
-      'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
-    };
-
-    final prefs = await SharedPreferences.getInstance();
-    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-    transactionStrings.add(json.encode(transaction)); // Menyimpan transaksi yang sudah di-encode
-    await prefs.setStringList('transactions', transactionStrings); // Menyimpan list transaksi ke SharedPreferences
-  }
-
   // Fungsi untuk menyimpan transaksi ke Firestore
   Future<void> saveTransactionToFirestore() async {
     Map<String, dynamic> transaction = {
@@ -98,26 +80,22 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: [Colors.blue, Colors.purple],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ).createShader(bounds),
-          child: Text('Pembayaran', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        ),
-        backgroundColor: Colors.transparent,
+        title: Text('Pembayaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Color(0xFF003f7f),
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blueAccent, Colors.pinkAccent],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          color: Colors.white,
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => KasirScreen(),
+              ),
+            );
+          },
         ),
       ),
+              
       body: Stack(
         children: [
           Positioned.fill(
@@ -150,9 +128,8 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Menampilkan nomor nota di atas nama pelanggan
                       Text(
-                        'Nomor Nota: $invoiceNumber', // Menampilkan nomor nota yang baru dihitung
+                        'Nomor Nota: $invoiceNumber',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 20),
@@ -222,7 +199,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                         value: paymentMethod,
                         onChanged: (String? newValue) {
                           setState(() {
-                            paymentMethod = newValue!; // Menyimpan metode pembayaran yang dipilih
+                            paymentMethod = newValue!;
                           });
                         },
                         items: <String>['Cash', 'Transfer BCA', 'Transfer BRI', 'Transfer Mandiri']
@@ -242,33 +219,29 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
                             } else if (!isAmountPaidValid()) {
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang tidak cukup')));
                             } else {
-                              saveTransactionToSharedPreferences().then((_) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pembayaran Berhasil!')));
-                              });
-
-                              // Panggil fungsi untuk menyimpan transaksi ke Firestore
-                              saveTransactionToFirestore();
-
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CetakNotaScreen(
-                                    orderMenu: widget.orderMenu, 
-                                    totalAmount: totalAmount,
-                                    change: change,
-                                    paymentMethod: paymentMethod,
-                                    customerName: customerNameController.text,
-                                    invoiceNumber: invoiceNumber, // Pastikan invoiceNumber dikirimkan ke CetakNotaScreen
+                              saveTransactionToFirestore().then((_) {
+                                // Pindah ke screen cetak nota setelah transaksi berhasil disimpan
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CetakNotaScreen(
+                                      orderMenu: widget.orderMenu, 
+                                      totalAmount: totalAmount,
+                                      change: change,
+                                      paymentMethod: paymentMethod,
+                                      customerName: customerNameController.text,
+                                      invoiceNumber: invoiceNumber, 
+                                    ),
                                   ),
-                                ),
-                              );
+                                );
+                              });
                             }
                           },
                           child: Text('Nota'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white12,
                             padding: EdgeInsets.symmetric(horizontal: 100, vertical: 15),
-                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
