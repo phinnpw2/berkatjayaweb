@@ -68,30 +68,6 @@ class _PesananScreenState extends State<PesananScreen> {
     }
   }
 
-  // Fungsi untuk menghasilkan nomor invoice
-  Future<String> generateInvoiceNumber() async {
-    try {
-      DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
-      DocumentSnapshot snapshot = await invoiceRef.get();
-
-      int invoiceNumber = 1;
-
-      if (snapshot.exists) {
-        invoiceNumber = snapshot['counter'] ?? 1;  // Mengambil nomor invoice dari Firestore
-      }
-
-      // Update nomor invoice
-      await invoiceRef.set({
-        'counter': invoiceNumber + 1,  // Increment nomor invoice
-      }, SetOptions(merge: true));
-
-      return 'INV${invoiceNumber.toString().padLeft(3, '0')}';  // Format INV001, INV002, dst.
-    } catch (e) {
-      print("Error generating invoice number: $e");
-      return 'INV001';  // Kembalikan default jika terjadi error
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,7 +81,7 @@ class _PesananScreenState extends State<PesananScreen> {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => NotaTempoScreen()),
+              MaterialPageRoute(builder: (context) => NotaTempoScreen()),  // Menavigasi ke NotaTempoScreen
             );
           },
         ),
@@ -122,7 +98,7 @@ class _PesananScreenState extends State<PesananScreen> {
               },
               decoration: InputDecoration(
                 labelText: 'Cari Nama Pelanggan',
-                labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.bold), // Ensure text is visible
+                labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.bold), 
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: Color(0xFF003f7f)),
@@ -138,7 +114,7 @@ class _PesananScreenState extends State<PesananScreen> {
                 onPressed: () => selectStartDate(context),
                 child: Text(
                   startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!),
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), // White bold text for buttons
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF003f7f),
@@ -152,7 +128,7 @@ class _PesananScreenState extends State<PesananScreen> {
                 onPressed: () => selectEndDate(context),
                 child: Text(
                   endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!),
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold), // White bold text for buttons
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF003f7f),
@@ -166,7 +142,7 @@ class _PesananScreenState extends State<PesananScreen> {
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('pesanan')
+                  .collection('pesanan') // Ambil data dari koleksi 'pesanan'
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -221,7 +197,7 @@ class _PesananScreenState extends State<PesananScreen> {
                                     Text('Pelanggan: $customerName', style: TextStyle(fontWeight: FontWeight.bold)),
                                     Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontWeight: FontWeight.bold)),
                                     SizedBox(height: 10),
-                                    Text('Rincian Produk:'),
+                                    Text('Rincian Produk:'), 
                                     SizedBox(height: 10),
                                     Column(
                                       children: List.generate(orderMenu.length, (i) {
@@ -278,67 +254,76 @@ class _PesananScreenState extends State<PesananScreen> {
                               Text('Total: Rp ${(pesananData['total'] ?? 0.0).toStringAsFixed(2)}', style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
                               SizedBox(height: 10),
                               ElevatedButton(
-                                onPressed: () async {
-                                  double totalAmount = pesananData['total'] ?? 0.0;
-                                  double change = pesananData['change'] ?? 0.0;
-                                  String paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
+  onPressed: () async {
+    double totalAmount = pesananData['total'] ?? 0.0;
+    double change = pesananData['change'] ?? 0.0;
+    String paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
+    List<Map<String, dynamic>> formattedOrderMenu = List<Map<String, dynamic>>.from(orderMenu);
 
-                                  List<Map<String, dynamic>> formattedOrderMenu = List<Map<String, dynamic>>.from(orderMenu);
+    // Ambil timestamp asli dari pesanan pertama kali dibuat (misalnya tanggal 12 April)
+    Timestamp originalTimestamp = pesananData['timestamp'];  // Pastikan Anda menyimpan timestamp saat pesanan pertama kali dibuat
 
-                                  String invoiceNumber = await generateInvoiceNumber();
+    try {
+      // Menyimpan data ke koleksi 'statusnotatempo' 
+      await FirebaseFirestore.instance.collection('statusnotatempo').add({
+        'customerName': customerName,
+        'orderDetails': formattedOrderMenu,
+        'total': totalAmount,
+        'change': change,
+        'paymentMethod': paymentMethod,
+        'status': 'Belum Lunas',
+        'invoiceNumber': invoiceNumber,
+        'timestamp': originalTimestamp,  // Gunakan timestamp yang sama
+      });
 
-                                  await FirebaseFirestore.instance.collection('pesanan').doc(orderId).update({
-                                    'status': 'Belum Lunas',
-                                    'invoiceNumber': invoiceNumber,
-                                  });
+      // Ambil ID dokumen pesanan yang valid
+      String orderId = filteredDocs[index].id;  // Ambil orderId yang benar
 
-                                  await FirebaseFirestore.instance.collection('pesanan').doc(orderId).delete();
+      // Verifikasi keberadaan dokumen sebelum menghapus
+      final docRef = FirebaseFirestore.instance.collection('pesanan').doc(orderId);
+      final docSnapshot = await docRef.get();
 
-                                  await FirebaseFirestore.instance.collection('statusnotatempo').add({
-                                    'customerName': customerName,
-                                    'orderDetails': formattedOrderMenu,
-                                    'total': totalAmount,
-                                    'change': change,
-                                    'paymentMethod': paymentMethod,
-                                    'status': 'Belum Lunas',
-                                    'invoiceNumber': invoiceNumber,
-                                  });
+      if (docSnapshot.exists) {
+        // Hapus data dari koleksi 'pesanan' setelah dipindahkan
+        await docRef.delete();
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CetakNotaScreen(
-                                        customerName: customerName,
-                                        orderMenu: formattedOrderMenu,
-                                        totalAmount: totalAmount,
-                                        change: change,
-                                        paymentMethod: paymentMethod,
-                                        invoiceNumber: invoiceNumber,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Text(
+        // Navigasi ke cetaknota_screen.dart setelah data dipindahkan dan dihapus
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CetakNotaScreen(
+              customerName: customerName,
+              orderMenu: formattedOrderMenu,
+              totalAmount: totalAmount,
+              change: change,
+              paymentMethod: paymentMethod,
+              invoiceNumber: invoiceNumber,
+              originalTimestamp: originalTimestamp,  // Kirim timestamp yang sama ke halaman CetakNotaScreen
+            ),
+          ),
+        );
+      } else {
+        // Menampilkan error jika dokumen tidak ditemukan
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dokumen pesanan tidak ditemukan')));
+      }
+    } catch (e) {
+      // Menangani error secara umum
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memindahkan data: $e')));
+    }
+  },
+  child: Text(
     'Cetak Nota',
     style: TextStyle(
-      color: Colors.white, // White text color
-      fontWeight: FontWeight.bold, // Bold text
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
     ),
   ),
   style: ElevatedButton.styleFrom(
-    backgroundColor: Color(0xFF003f7f), 
+    backgroundColor: Color(0xFF003f7f),
     padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
   ),
 ),
-                              SizedBox(height: 1),
-                              Align(
-                                alignment: Alignment.bottomRight,
-                                child: IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.blueGrey),
-                                  onPressed: () => deleteOrder(orderId, orderMenu),
-                                ),
-                              ),
                             ],
                           ),
                         ),

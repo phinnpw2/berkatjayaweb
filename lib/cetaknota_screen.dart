@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:berkatjaya_web/kasir_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Mengimpor intl package
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,7 @@ class CetakNotaScreen extends StatelessWidget {
   final double change;
   final String paymentMethod;
   final String invoiceNumber;  // Menerima parameter invoiceNumber
+  final Timestamp? originalTimestamp;  // Menyimpan timestamp asli, opsional
 
   CetakNotaScreen({
     required this.customerName,
@@ -20,62 +22,18 @@ class CetakNotaScreen extends StatelessWidget {
     required this.change,
     required this.paymentMethod,
     required this.invoiceNumber,  // Menerima parameter invoiceNumber
+    this.originalTimestamp,  // Menambahkan timestamp asli sebagai opsional
   });
 
-  // Fungsi untuk menyimpan transaksi ke SharedPreferences
-  Future<void> saveTransactionToSharedPreferences() async {
-    // Membuat objek transaksi
-    Map<String, dynamic> transaction = {
-      'customerName': customerName,
-      'orderDetails': orderMenu,
-      'totalAmount': totalAmount,
-      'paymentMethod': paymentMethod,
-      'change': change,
-      'status_transaksi': 'selesai', // Status transaksi selesai
-      'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
-    };
+  @override
+  Widget build(BuildContext context) {
+    // Jika originalTimestamp ada, gunakan tanggal tersebut, jika tidak gunakan DateTime.now()
+    DateTime orderDate = originalTimestamp?.toDate() ?? DateTime.now();  // Jika originalTimestamp tidak ada, gunakan waktu saat ini
+    DateTime printDate = DateTime.now();  // Waktu nota dicetak (waktu sekarang)
 
-    // Menyimpan transaksi ke SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
-    transactionStrings.add(json.encode(transaction)); // Menambahkan transaksi ke dalam list
-    await prefs.setStringList('transactions', transactionStrings);
-  }
-
-  // Fungsi untuk mencegah navigasi kembali dan menampilkan notifikasi
-  Future<bool> _onWillPop(BuildContext context) async {
-    // Tampilkan dialog untuk memastikan pengguna ingin kembali tanpa menyelesaikan transaksi
-    bool result = await showDialog<bool>( 
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Transaksi Sudah Selesai'),
-        content: Text('Transaksi sudah selesai. Anda tidak dapat kembali ke halaman sebelumnya.'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false); // Tidak melanjutkan
-            },
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    ) ?? false; // Default ke false jika dialog tidak menampilkan hasil
-
-    return result;
-  }
-
-@override
-Widget build(BuildContext context) {
-  // Mendapatkan tanggal dan waktu saat ini
-  String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  String currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
-
-  return WillPopScope(
-    onWillPop: () => _onWillPop(context), // Menangani tombol kembali
-    child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
-        title: Text('Nota Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Cetak Nota', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.deepPurpleAccent,
         elevation: 5,
       ),
@@ -119,11 +77,18 @@ Widget build(BuildContext context) {
                     ),
                     SizedBox(height: 10),
                     // Tanggal dan Waktu
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Tanggal: $currentDate', style: TextStyle(fontSize: 14, color: Colors.black)),
-                        Text('Waktu: $currentTime', style: TextStyle(fontSize: 14, color: Colors.black)),
+                        Text(
+                          originalTimestamp != null ? 'Tanggal Nota Dibuat: ${DateFormat('yyyy-MM-dd').format(orderDate)}' : '', 
+                          style: TextStyle(fontSize: 14, color: Colors.black),
+                        ), 
+                        SizedBox(height: 5),
+                        Text(
+                           'Tanggal Cetak: ${DateFormat('yyyy-MM-dd').format(printDate)}',
+                          style: TextStyle(fontSize: 14, color: Colors.black),
+                        ),                     
                       ],
                     ),
                     SizedBox(height: 15),
@@ -142,7 +107,7 @@ Widget build(BuildContext context) {
                     SizedBox(height: 10),
                     
                     // Rincian Produk
-                    Text('Detail Pembelian:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                    Text('Detail Pembelian:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 10),
                     Container(
                       decoration: BoxDecoration(
@@ -167,7 +132,7 @@ Widget build(BuildContext context) {
                     SizedBox(height: 10),
                     Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 15),
-                    Text('Bayar dengan: $paymentMethod', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                    Text('Metode Pembayaran : $paymentMethod', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     SizedBox(height: 20),
                     // Tombol Transaksi Baru
                     Center(
@@ -218,9 +183,6 @@ Widget build(BuildContext context) {
           ),
         ),
       ),
-    ),
     );
   }
 }
-
-

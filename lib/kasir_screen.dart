@@ -6,7 +6,6 @@ import 'dart:ui';
 import 'pembayaran_screen.dart';
 import 'riwayattransaksi_screen.dart';
 import 'home_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -29,45 +28,10 @@ class _KasirScreenState extends State<KasirScreen> {
   bool isDropdownVisible = false;
   final List<Map<String, dynamic>> orderMenu = [];
   String? selectedProductId;
-  String? invoiceNumber; // Menyimpan nomor invoice sementara
-
-  // Fungsi untuk menghasilkan nomor nota yang berurutan
-  Future<void> generateInvoiceNumber() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? savedInvoiceNumber = prefs.getString('invoiceNumber');
-
-    if (savedInvoiceNumber == null) {
-      // Jika nomor invoice belum ada (artinya transaksi belum dimulai)
-      final counterDoc = await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').get();
-      int counter = 1;
-      if (counterDoc.exists) {
-        counter = counterDoc.data()?['counter'] ?? 1;
-      }
-
-      // Membuat nomor nota dengan format INV001, INV002, dll
-      setState(() {
-        invoiceNumber = 'INV${counter.toString().padLeft(3, '0')}';
-      });
-
-      // Simpan nomor invoice di SharedPreferences
-      await prefs.setString('invoiceNumber', invoiceNumber!);
-
-      // Increment counter untuk nomor nota berikutnya
-      await FirebaseFirestore.instance.collection('invoiceCounter').doc('counter').set({
-        'counter': counter + 1,
-      });
-    } else {
-      // Jika nomor invoice sudah ada, gunakan nomor invoice yang sudah disimpan
-      setState(() {
-        invoiceNumber = savedInvoiceNumber;
-      });
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    generateInvoiceNumber();  // Menghasilkan nomor invoice pada saat awal
   }
 
   // Fungsi untuk menambahkan produk ke dalam order menu
@@ -230,20 +194,11 @@ class _KasirScreenState extends State<KasirScreen> {
     if (orderMenu.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada transaksi')));
     } else {
-      // Kirim transaksi ke halaman pembayaran dengan nomor nota yang terurut
-      bool paymentSuccessful = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PembayaranScreen(orderMenu: orderMenu, invoiceNumber: invoiceNumber),
-        ),
-      );
-
-      // Jika pembayaran dibatalkan atau tidak jadi, nomor invoice tetap tidak bertambah
-      if (!paymentSuccessful) {
-        setState(() {
-          // Jika pembayaran tidak berhasil, nomor invoice tetap tidak bertambah
-        });
-      }
+      // Kirim transaksi ke halaman pembayaran
+      await Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => PembayaranScreen(orderMenu: orderMenu)),
+);
     }
   }
 
@@ -252,11 +207,6 @@ class _KasirScreenState extends State<KasirScreen> {
     setState(() {
       orderMenu.clear();
     });
-
-    final prefs = await SharedPreferences.getInstance();
-    // Reset invoice number on new transaction
-    await prefs.remove('invoiceNumber'); // Hapus nomor invoice yang lama jika transaksi baru dimulai
-    generateInvoiceNumber(); // Generate nomor invoice baru
   }
 
   @override

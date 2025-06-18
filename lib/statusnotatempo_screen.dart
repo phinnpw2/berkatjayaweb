@@ -33,7 +33,7 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
 
     await invoiceRef.set({'counter': invoiceNumber + 1}, SetOptions(merge: true));
 
-    return 'INV${invoiceNumber.toString().padLeft(4, '0')}';
+    return 'INV${invoiceNumber.toString().padLeft(3, '0')}';
   }
 
   Future<void> konfirmasiPembayaran(String orderId, Map<String, dynamic> pesananData) async {
