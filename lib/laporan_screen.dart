@@ -17,7 +17,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
     super.initState();
     loadTransactionsFromFirestore(); // Memuat transaksi langsung dari Firestore
   }
-
+  //disini
   // Fungsi untuk memuat transaksi dari Firestore
   Future<void> loadTransactionsFromFirestore() async {
     try {
