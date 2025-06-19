@@ -22,20 +22,6 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
     }
   }
 
-  Future<String> generateInvoiceNumber() async {
-    DocumentReference invoiceRef = FirebaseFirestore.instance.collection('invoiceCounter').doc('counter');
-    DocumentSnapshot invoiceSnapshot = await invoiceRef.get();
-    int invoiceNumber = 1;
-
-    if (invoiceSnapshot.exists) {
-      invoiceNumber = invoiceSnapshot['counter'] ?? 1;
-    }
-
-    await invoiceRef.set({'counter': invoiceNumber + 1}, SetOptions(merge: true));
-
-    return 'INV${invoiceNumber.toString().padLeft(3, '0')}';
-  }
-
   Future<void> konfirmasiPembayaran(String orderId, Map<String, dynamic> pesananData) async {
     try {
       setState(() {
@@ -47,13 +33,12 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
       String customerName = pesananData['customerName'] ?? 'Tidak ada nama';
       String paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
       List<dynamic> orderDetails = pesananData['orderDetails'] ?? [];
+      String invoiceNumber = pesananData['invoiceNumber'] ?? 'No Invoice'; // Reference the existing invoice number
 
       if (amountPaid >= totalAmount) {
-        String invoiceNumber = await generateInvoiceNumber();
-
         await FirebaseFirestore.instance.collection('statusnotatempo').doc(orderId).update({
           'status': 'Lunas',
-          'invoiceNumber': invoiceNumber,
+          'invoiceNumber': invoiceNumber, // Use the existing invoice number
         }).then((_) async {
           print('Status berhasil diperbarui menjadi Lunas dengan Invoice Number: $invoiceNumber.');
 
@@ -63,8 +48,7 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
             'totalAmount': totalAmount,
             'paymentMethod': paymentMethod,
             'status': 'Lunas',
-            'timestamp': FieldValue.serverTimestamp(),
-            'keterangan': 'notatempo',
+            'timestamp': FieldValue.serverTimestamp(),           
             'invoiceNumber': invoiceNumber,
             'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
             'change': amountPaid - totalAmount,
@@ -117,12 +101,66 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
     }
   }
 
+  Future<void> showPaymentMethodDialog(String orderId, Map<String, dynamic> pesananData) async {
+    String selectedPaymentMethod = 'Tidak Diketahui';
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Pilih Metode Pembayaran'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('Tunai'),
+              onTap: () {
+                selectedPaymentMethod = 'Tunai';
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text('Transfer BCA'),
+              onTap: () {
+                selectedPaymentMethod = 'Transfer BCA';
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text('Transfer BRI'),
+              onTap: () {
+                selectedPaymentMethod = 'Transfer BRI';
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text('Transfer Mandiri'),
+              onTap: () {
+                selectedPaymentMethod = 'Transfer Mandiri';
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close the dialog
+            },
+            child: Text('Batal'),
+          ),
+        ],
+      ),
+    );
+    // Update the payment method before proceeding with confirmation
+    pesananData['paymentMethod'] = selectedPaymentMethod;
+    await konfirmasiPembayaran(orderId, pesananData);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Status Nota Tempo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Color(0xFF003f7f), // Warna yang sama seperti PesananScreen
+        backgroundColor: Color(0xFF003f7f),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
@@ -156,8 +194,7 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
                     final totalAmount = pesananData['total'] ?? 0.0;
                     final paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
                     final status = pesananData['status'] ?? 'Belum Diketahui';
-                    final orderId = pesananDocs[index].id;
-                    final keterangan = pesananData['keterangan'] ?? 'Tidak ada keterangan';
+                    final orderId = pesananDocs[index].id;               
 
                     return GestureDetector(
                       onTap: () {
@@ -175,8 +212,6 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
                                 Text('Metode Pembayaran: $paymentMethod'),
                                 SizedBox(height: 10),
                                 Text('Total: Rp ${totalAmount.toStringAsFixed(2)}'),
-                                SizedBox(height: 10),
-                                Text('Keterangan: $keterangan'),
                                 SizedBox(height: 10),
                                 Text('Rincian Produk:'),
                                 SizedBox(height: 10),
@@ -240,23 +275,17 @@ class _StatusNotaTempoScreenState extends State<StatusNotaTempoScreen> {
                               SizedBox(height: 10),
                               Text(
                                 'Status: $status',
-                                style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                'Keterangan: $keterangan',
-                                style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
-                              ),
+                                style: TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                              ),                                                       
                               SizedBox(height: 10),
                               ElevatedButton(
                                 onPressed: () async {
-                                  await konfirmasiPembayaran(orderId, pesananData);
+                                  await showPaymentMethodDialog(orderId, pesananData);
                                 },
                                 child: Text('Konfirmasi Pembayaran'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF003f7f),
-                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                                  color: Colors.white),
+                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                               ),
                             ],

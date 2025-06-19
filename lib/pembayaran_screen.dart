@@ -156,7 +156,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
   // Icon untuk metode pembayaran
   IconData _getPaymentIcon(String method) {
     switch (method) {
-      case 'Cash':
+      case 'Tunai':
         return Icons.payments;
       case 'Transfer BCA':
         return Icons.account_balance;

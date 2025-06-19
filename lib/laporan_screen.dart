@@ -116,7 +116,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
     return Container(
       margin: EdgeInsets.only(top: 20),
       decoration: BoxDecoration(
-        color: Colors.purple.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [BoxShadow(color: Colors.grey, blurRadius: 3)],
       ),
