@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
+import 'user_list_screen.dart';
+import 'logger.dart';
 
 class PengaturanScreen extends StatefulWidget {
   final String username;
@@ -25,9 +27,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
 
   final _newUsernameController = TextEditingController();
   final _newPasswordController = TextEditingController();
-  String _newRole = 'Admin';
+  String _newRole = 'Kasir';
 
   bool _isLoading = false;
+  final _availableRoles = ['Owner', 'Kasir', 'Kepala Gudang', 'Sales'];
 
   @override
   void initState() {
@@ -89,7 +92,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     setState(() {
       _newUsernameController.clear();
       _newPasswordController.clear();
-      _newRole = 'Admin';
+      _newRole = 'Kasir';
       _isLoading = false;
     });
 
@@ -127,6 +130,8 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isOwner = widget.role.toLowerCase() == 'owner';
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Pengaturan'),
@@ -149,26 +154,29 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             TextField(
               controller: _editUsernameController,
               decoration: InputDecoration(labelText: 'Username'),
+              readOnly: !isOwner,
             ),
             TextField(
               controller: _editPasswordController,
               decoration: InputDecoration(labelText: 'Password'),
               obscureText: true,
+              readOnly: !isOwner,
             ),
             TextField(
               controller: _editRoleController,
               decoration: InputDecoration(labelText: 'Role'),
-              readOnly: widget.role != 'Owner',
+              readOnly: true,
             ),
             const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _editAkun,
-              child: Text('Simpan Perubahan'),
-            ),
+            if (isOwner)
+              ElevatedButton(
+                onPressed: _isLoading ? null : _editAkun,
+                child: Text('Simpan Perubahan'),
+              ),
 
             const SizedBox(height: 32),
 
-            if (widget.role == 'Owner') ...[
+            if (isOwner) ...[
               Text('➕ Tambah Akun Baru', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               TextField(
@@ -187,7 +195,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 onChanged: (val) {
                   if (val != null) setState(() => _newRole = val);
                 },
-                items: ['Owner', 'Admin', 'Kepala Gudang', 'Sales'].map((e) {
+                items: _availableRoles.map((e) {
                   return DropdownMenuItem(value: e, child: Text(e));
                 }).toList(),
               ),
@@ -195,6 +203,18 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _tambahAkunBaru,
                 child: Text('Buat Akun Baru'),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                icon: Icon(Icons.list),
+                label: Text('Lihat Semua Akun Terdaftar'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => UserListScreen()),
+                  );
+                },
               ),
             ]
           ],

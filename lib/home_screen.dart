@@ -6,6 +6,9 @@ import 'riwayattransaksi_screen.dart';
 import 'statusnotatempo_screen.dart';
 import 'pengaturan_screen.dart';
 import 'laporan_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'logger.dart';
+
 
 class HomeScreen extends StatelessWidget {
   final String username;
@@ -21,6 +24,41 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final allowedCategories = {
+      'Owner': [
+        'Kasir',
+        'Stok Produk',
+        'Laporan',
+        'Pengaturan',
+        'Status Nota Tempo',
+        'Riwayat Transaksi',
+      ],
+      'Kasir': [
+        'Kasir',
+        'Status Nota Tempo',
+        'Riwayat Transaksi',
+        'Pengaturan',
+      ],
+      'Kepala Gudang': [
+        'Stok Produk',
+        'Pengaturan',
+      ],
+      'Sales': [
+        'Stok Produk',
+        'Status Nota Tempo',
+        'Pengaturan',
+      ],
+    }[role] ?? [];
+
+    Future<void> logActivity(String activity) async {
+      await FirebaseFirestore.instance.collection('activity_log').add({
+        'userId': userDocId,
+        'username': username,
+        'activity': activity,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF003f7f).withOpacity(0.8),
@@ -69,7 +107,6 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Container Selamat Datang
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -87,8 +124,6 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 24),
-
-                  // Text TOKO BERKAT JAYA
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 460, vertical: 16),
                     child: Text(
@@ -107,23 +142,41 @@ class HomeScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                   ),
-
-                  // GridView dengan penyesuaian lebar kartu
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 60),
                     child: GridView.count(
                       crossAxisCount: 3,
-                      crossAxisSpacing: 16, // Atur jarak antar kolom
-                      mainAxisSpacing: 56,  // Atur jarak antar baris
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 56,
                       physics: NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
-                      childAspectRatio: 1.7, // Kecilkan rasio aspek
+                      childAspectRatio: 1.7,
                       children: categories.map((category) {
+                        final title = category['title'];
+                        final isAllowed = allowedCategories.contains(title);
+
                         return CategoryCard(
-                          title: category['title'],
+                          title: title,
                           imagePath: category['imagePath'],
-                          onTap: () {
-                            final title = category['title'];
+                          onTap: () async {
+                            if (!isAllowed) {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: Text('Akses Ditolak'),
+                                  content: Text('Role $role tidak memiliki akses ke menu "$title".'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text('OK'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              return;
+                            }
+
+                            await logActivity('Akses menu: $title');
 
                             if (title == 'Kasir') {
                               showDialog(
@@ -133,35 +186,26 @@ class HomeScreen extends StatelessWidget {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    title: Text(
-                                      'Pilih Mode Kasir',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                    ),
+                                    title: Text('Pilih Mode Kasir'),
                                     content: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         ListTile(
                                           leading: Icon(Icons.payment, color: Color(0xFF003f7f)),
                                           title: Text('Kasir Langsung'),
-                                          onTap: () {
+                                          onTap: () async {
                                             Navigator.pop(context);
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) => KasirScreen()),
-                                            );
+                                            await logActivity('Masuk ke Kasir Langsung');
+                                            Navigator.push(context, MaterialPageRoute(builder: (_) => KasirScreen()));
                                           },
                                         ),
                                         ListTile(
                                           leading: Icon(Icons.receipt_long, color: Color(0xFF003f7f)),
                                           title: Text('Nota Tempo'),
-                                          onTap: () {
+                                          onTap: () async {
                                             Navigator.pop(context);
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) => NotaTempoScreen()),
-                                            );
+                                            await logActivity('Masuk ke Nota Tempo');
+                                            Navigator.push(context, MaterialPageRoute(builder: (_) => NotaTempoScreen()));
                                           },
                                         ),
                                       ],
@@ -170,38 +214,18 @@ class HomeScreen extends StatelessWidget {
                                 },
                               );
                             } else if (title == 'Status Nota Tempo') {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => StatusNotaTempoScreen(),
-                                ),
-                              );
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => StatusNotaTempoScreen()));
                             } else if (title == 'Riwayat Transaksi') {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => RiwayatTransaksiScreen(),
-                                ),
-                              );
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => RiwayatTransaksiScreen()));
                             } else if (title == 'Laporan') {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => LaporanScreen(),
-                                ),
-                              );
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => LaporanScreen()));
                             } else if (title == 'Stok Produk') {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ProdukPage(),
-                                ),
-                              );
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => ProdukPage()));
                             } else if (title == 'Pengaturan') {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => PengaturanScreen(
+                                  builder: (_) => PengaturanScreen(
                                     username: username,
                                     role: role,
                                     userDocId: userDocId,
@@ -214,7 +238,6 @@ class HomeScreen extends StatelessWidget {
                       }).toList(),
                     ),
                   ),
-                  SizedBox(height: 20), // Spasi tambahan di bawah
                 ],
               ),
             ),
@@ -242,15 +265,15 @@ class CategoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 120, // Ukuran kartu lebih kecil
-        height: 140, // Sesuaikan tinggi kartu
+        width: 120,
+        height: 140,
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          color: Color(0xFF003f7f).withOpacity(0.88), // Latar belakang kotak kategori
+          color: Color(0xFF003f7f).withOpacity(0.88),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.blueAccent, // Warna border
-            width: 2, // Lebar border
+            color: Colors.blueAccent,
+            width: 2,
           ),
           boxShadow: [
             BoxShadow(
@@ -263,16 +286,15 @@ class CategoryCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Kotak abu-abu di sekitar logo
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3), // Efek transparan pada logo
+                color: Colors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Image.asset(
                 imagePath,
-                height: 50, // Ukuran ikon lebih besar
+                height: 50,
                 width: 50,
                 errorBuilder: (context, error, stackTrace) {
                   return Icon(
@@ -284,13 +306,12 @@ class CategoryCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8),
-            // Judul dengan ukuran font disesuaikan
             Text(
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16, // Ukuran font judul lebih kecil dan terang
-                color: Colors.white, // Ubah warna teks jadi putih
+                fontSize: 16,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 height: 1.2,
               ),

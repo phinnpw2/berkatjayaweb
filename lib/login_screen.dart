@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'home_screen.dart';  // Assuming you have this screen created
+import 'home_screen.dart';
+import 'logger.dart'; 
+import 'user_list_screen.dart'; 
+import 'user_session.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -25,13 +29,23 @@ class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Handle login logic
+  bool _isLoading = false;
+
   Future<void> _login() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Username dan password tidak boleh kosong"),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      // Query Firestore for the user with matching username and password
       final query = await FirebaseFirestore.instance
           .collection('user')
           .where('username', isEqualTo: username)
@@ -39,15 +53,23 @@ class _LoginPageState extends State<LoginPage> {
           .get();
 
       if (query.docs.isNotEmpty) {
-        // Get the first matching document
         final doc = query.docs.first;
         final userData = doc.data();
         final userDocId = doc.id;
 
-        final role = userData['role'];
-        final namaUser = userData['username'];
+        final role = userData['role'] ?? 'Unknown';
+        final namaUser = userData['username'] ?? 'User';
+        
+        UserSession.userDocId = userDocId;
+        UserSession.username = namaUser;
+        UserSession.role = role;
 
-        // Navigate to the HomeScreen with the user data
+        await logActivity(
+          userId: userDocId,
+          username: namaUser,
+          activity: 'Login ke sistem',
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -59,18 +81,19 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       } else {
-        // Show error message if credentials are wrong
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Username atau password salah"),
           backgroundColor: Colors.red,
         ));
       }
     } catch (e) {
-      print("Error: $e");
+      print("Login error: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text("Terjadi kesalahan, coba lagi"),
         backgroundColor: Colors.red,
       ));
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -79,31 +102,26 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Positioned.fill(
             child: Image.asset(
               'assets/backgroundlogin.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // Transparent black overlay
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(0.5),  // Black overlay with opacity
+              color: Colors.black.withOpacity(0.5),
             ),
           ),
           Center(
             child: Container(
-              width: 350,  // Adjusted width for the form
+              width: 350,
               padding: EdgeInsets.all(20),
-              margin: EdgeInsets.only(top: 100),  // Added margin to prevent touching the top
+              margin: EdgeInsets.only(top: 100),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5), // Semi-transparent white background
-                borderRadius: BorderRadius.circular(8),  // Rounded corners
-                border: Border.all(
-                  color: Colors.blue,  // Border color
-                  width: 2,  // Border width
-                ),
+                color: Colors.white.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue, width: 2),
                 boxShadow: [
                   BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5)),
                 ],
@@ -124,13 +142,12 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     'Login',
                     style: TextStyle(
-                      fontSize: 18,  // Smaller size for the "Login" text
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: Colors.black,
                     ),
                   ),
                   SizedBox(height: 10),
-                  // Username TextField
                   TextField(
                     controller: _usernameController,
                     decoration: InputDecoration(
@@ -138,25 +155,18 @@ class _LoginPageState extends State<LoginPage> {
                       prefixIcon: Icon(Icons.person),
                       filled: true,
                       fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Color(0xFF003f7f),  // Blue color when focused
-                        ),
+                        borderSide: BorderSide(color: Color(0xFF003f7f)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Colors.grey,  // Gray border when not focused
-                        ),
+                        borderSide: BorderSide(color: Colors.grey),
                       ),
                     ),
                   ),
                   SizedBox(height: 20),
-                  // Password TextField
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
@@ -165,43 +175,38 @@ class _LoginPageState extends State<LoginPage> {
                       prefixIcon: Icon(Icons.lock),
                       filled: true,
                       fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Color(0xFF003f7f),  // Blue color when focused
-                        ),
+                        borderSide: BorderSide(color: Color(0xFF003f7f)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Colors.grey,  // Gray border when not focused
-                        ),
+                        borderSide: BorderSide(color: Colors.grey),
                       ),
                     ),
                   ),
                   SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _login,  // Call the login method
+                    onPressed: _isLoading ? null : _login,
                     style: ButtonStyle(
                       backgroundColor: MaterialStateProperty.all<Color>(Color(0xFF003f7f)),
-                      padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.symmetric(vertical: 15, horizontal: 40)),
+                      padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
+                          EdgeInsets.symmetric(vertical: 15, horizontal: 40)),
                       shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
+                        RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
                     ),
-                    child: Text(
-                      'Login',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            'Login',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ],
               ),

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'logger.dart';
+import 'user_session.dart';
 
 class ProdukPage extends StatefulWidget {
   const ProdukPage({super.key});
@@ -25,7 +27,6 @@ class _ProdukPageState extends State<ProdukPage> {
   String? _base64Image;
   bool _isLoading = false;
 
-  // Fungsi untuk memilih gambar
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -37,7 +38,6 @@ class _ProdukPageState extends State<ProdukPage> {
     }
   }
 
-  // Fungsi untuk menambahkan produk
   Future<void> _tambahProduk() async {
     final nama = _namaController.text.trim();
     final stok = int.tryParse(_stokController.text) ?? -1;
@@ -62,7 +62,6 @@ class _ProdukPageState extends State<ProdukPage> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // Reset form
       _namaController.clear();
       _stokController.clear();
       _hargaController.clear();
@@ -82,7 +81,6 @@ class _ProdukPageState extends State<ProdukPage> {
     }
   }
 
-  // Fungsi untuk mengedit produk
   Future<void> _editProduk(String id, String nama, int stok, int harga) async {
     _namaController.text = nama;
     _stokController.text = stok.toString();
@@ -90,10 +88,17 @@ class _ProdukPageState extends State<ProdukPage> {
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       isScrollControlled: true,
       builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -145,7 +150,6 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
-  // Fungsi untuk menghapus produk
   Future<void> _hapusProduk(String id, String nama) async {
     showDialog(
       context: context,
@@ -182,24 +186,28 @@ class _ProdukPageState extends State<ProdukPage> {
                 AppBar(
                   title: const Text("Stok Produk", style: TextStyle(color: Colors.white)),
                   backgroundColor: const Color(0xFF003366),
-                 
                   elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          color: Colors.white,
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')),
-            );
-          },
-        ),
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    color: Colors.white,
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HomeScreen(
+                            username: UserSession.username,
+                            role: UserSession.role,
+                            userDocId: UserSession.userDocId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      // Search
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -229,7 +237,6 @@ class _ProdukPageState extends State<ProdukPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // Filter Bar
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
@@ -299,7 +306,6 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
-  // Widget untuk menampilkan produk dalam bentuk GridView
   Widget _buildProdukList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -337,8 +343,9 @@ class _ProdukPageState extends State<ProdukPage> {
             final data = docs[index].data() as Map<String, dynamic>;
             final nama = data['nama'] ?? 'tidak tersedia';
             final stok = data['stok'] ?? 0;
-            final harga = data['harga'] ?? 0.0;
+            final harga = data['harga'] ?? 0;
             final img = data['gambar'] ?? '';
+
             return Material(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -380,7 +387,6 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
-  // Menampilkan bottom sheet untuk tambah produk
   void _showTambahProdukBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -389,7 +395,9 @@ class _ProdukPageState extends State<ProdukPage> {
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16, right: 16, top: 24,
+          left: 16,
+          right: 16,
+          top: 24,
         ),
         child: SingleChildScrollView(
           child: Column(
