@@ -22,38 +22,35 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   static const Color lightBlue = Color(0xFFE3F2FD);
   static const Color cardColor = Color(0xFFF8FBFF);
 
-  // Fungsi untuk memuat transaksi dari Firestore
   Future<void> loadTransactionsFromFirestore() async {
-    try {
-      var snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi').get();
-      List<Map<String, dynamic>> loadedTransactions = [];
-      snapshot.docs.forEach((doc) {
-        Map<String, dynamic> transaction = doc.data();
-        loadedTransactions.add(transaction);
-      });
-      setState(() {
-        transactions = loadedTransactions;
-      });
-    } catch (e) {
-      print("Error loading transactions from Firestore: $e");
-    }
-  }
-
-  // Fungsi untuk memuat transaksi dari SharedPreferences
-  Future<void> loadTransactionsFromSharedPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> transactionStrings = prefs.getStringList('transactions') ?? [];
+  try {
+    var snapshot = await FirebaseFirestore.instance.collection('riwayattransaksi').get();
     List<Map<String, dynamic>> loadedTransactions = [];
 
-    for (var transactionString in transactionStrings) {
-      Map<String, dynamic> transaction = json.decode(transactionString);
+    snapshot.docs.forEach((doc) {
+      Map<String, dynamic> transaction = doc.data();
       loadedTransactions.add(transaction);
-    }
+    });
+
+    // Mengurutkan transaksi berdasarkan nomor nota secara menurun
+    loadedTransactions.sort((a, b) {
+      String invoiceA = a['invoiceNumber'] ?? '';
+      String invoiceB = b['invoiceNumber'] ?? '';
+
+      // Mengambil bagian angka dari nomor nota (menghilangkan 'INV' dan mengonversi menjadi angka)
+      int numberA = int.tryParse(invoiceA.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      int numberB = int.tryParse(invoiceB.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+      return numberB.compareTo(numberA);  // Mengurutkan secara menurun
+    });
 
     setState(() {
       transactions = loadedTransactions;
     });
+  } catch (e) {
+    print("Error loading transactions from Firestore: $e");
   }
+}
 
   // Fungsi untuk menyimpan transaksi ke SharedPreferences
   Future<void> saveTransactionToSharedPreferences(Map<String, dynamic> transaction) async {
