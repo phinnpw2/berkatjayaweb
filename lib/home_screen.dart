@@ -7,7 +7,7 @@ import 'statusnotatempo_screen.dart';
 import 'pengaturan_screen.dart';
 import 'laporan_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'logger.dart';
+
 
 
 class HomeScreen extends StatelessWidget {
@@ -49,16 +49,6 @@ class HomeScreen extends StatelessWidget {
         'Pengaturan',
       ],
     }[role] ?? [];
-
-    Future<void> logActivity(String activity) async {
-      await FirebaseFirestore.instance.collection('activity_log').add({
-        'userId': userDocId,
-        'username': username,
-        'activity': activity,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    }
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF003f7f).withOpacity(0.8),
@@ -176,7 +166,7 @@ class HomeScreen extends StatelessWidget {
                               return;
                             }
 
-                            await logActivity('Akses menu: $title');
+                    
 
                             if (title == 'Kasir') {
                               showDialog(
@@ -195,7 +185,6 @@ class HomeScreen extends StatelessWidget {
                                           title: Text('Kasir Langsung'),
                                           onTap: () async {
                                             Navigator.pop(context);
-                                            await logActivity('Masuk ke Kasir Langsung');
                                             Navigator.push(context, MaterialPageRoute(builder: (_) => KasirScreen()));
                                           },
                                         ),
@@ -204,7 +193,6 @@ class HomeScreen extends StatelessWidget {
                                           title: Text('Nota Tempo'),
                                           onTap: () async {
                                             Navigator.pop(context);
-                                            await logActivity('Masuk ke Nota Tempo');
                                             Navigator.push(context, MaterialPageRoute(builder: (_) => NotaTempoScreen()));
                                           },
                                         ),

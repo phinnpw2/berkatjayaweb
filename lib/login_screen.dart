@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
-import 'logger.dart'; 
-import 'user_list_screen.dart'; 
 import 'user_session.dart';
 
 
@@ -63,12 +61,6 @@ class _LoginPageState extends State<LoginPage> {
         UserSession.userDocId = userDocId;
         UserSession.username = namaUser;
         UserSession.role = role;
-
-        await logActivity(
-          userId: userDocId,
-          username: namaUser,
-          activity: 'Login ke sistem',
-        );
 
         Navigator.pushReplacement(
           context,

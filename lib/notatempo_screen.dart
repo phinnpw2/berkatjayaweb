@@ -195,66 +195,81 @@ class _NotaTempoScreenState extends State<NotaTempoScreen> {
   }
 
   // Fungsi untuk menyimpan pesanan ke daftar pesanan
-  void saveOrder() async {
-    if (orderMenu.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tidak ada pesanan')));
-    } else {
-      String customerName = '';
-      await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          TextEditingController nameController = TextEditingController();
-          return AlertDialog(
-            title: Text("Masukkan Nama Pelanggan"),
-            content: TextField(
-              controller: nameController,
-              decoration: InputDecoration(hintText: "Nama Pelanggan"),
+  // Fungsi untuk menyimpan pesanan ke daftar pesanan
+void saveOrder() async {
+  if (orderMenu.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Tidak ada pesanan')),
+    );
+  } else {
+    String customerName = '';
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        TextEditingController nameController = TextEditingController();
+        return AlertDialog(
+          title: Text("Masukkan Nama Pelanggan"),
+          content: TextField(
+            controller: nameController,
+            decoration: InputDecoration(hintText: "Nama Pelanggan"),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text("Batal"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
             ),
-            actions: <Widget>[
-              TextButton(
-                child: Text("Batal"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: Text("Simpan"),
-                onPressed: () {
-                  setState(() {
-                    customerName = nameController.text;
-                  });
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
+            TextButton(
+              child: Text("Simpan"),
+              onPressed: () {
+                setState(() {
+                  customerName = nameController.text;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (customerName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Nama pelanggan harus diisi')),
       );
-
-      if (customerName.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Nama pelanggan harus diisi')));
-        return;
-      }
-
-      // Menyimpan pesanan dengan nomor invoice ke Firestore
-      String invoiceNumber = await generateInvoiceNumber(); // Dapatkan nomor invoice
-
-      final orderRef = FirebaseFirestore.instance.collection('pesanan').doc();
-      await orderRef.set({
-        'orderDetails': orderMenu,
-        'total': totalCharge,
-        'timestamp': FieldValue.serverTimestamp(),
-        'customerName': customerName, // Menyimpan nama pelanggan
-        'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil disimpan!')));
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => PesananScreen()),
-      );
+      return;
     }
+
+    // Siapkan timestamp lokal
+    final Timestamp nowTimestamp = Timestamp.now();
+
+    // Dapatkan nomor invoice
+    String invoiceNumber = await generateInvoiceNumber();
+
+    // Simpan ke Firestore
+    final orderRef = FirebaseFirestore.instance.collection('pesanan').doc();
+    await orderRef.set({
+      'orderDetails': orderMenu,
+      'total': totalCharge,
+      'timestamp': nowTimestamp, // langsung simpan Timestamp.now()
+      'customerName': customerName,
+      'statusNota': 'belum dicetak',
+      'statusPembayaran': 'belum lunas',
+      'invoiceNumber': invoiceNumber,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Pesanan berhasil disimpan!')),
+    );
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => PesananScreen()),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

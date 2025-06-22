@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
-import 'user_list_screen.dart';
-import 'logger.dart';
 
 class PengaturanScreen extends StatefulWidget {
   final String username;
@@ -210,10 +208,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 label: Text('Lihat Semua Akun Terdaftar'),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => UserListScreen()),
-                  );
+              
                 },
               ),
             ]
