@@ -1,6 +1,6 @@
+import 'package:berkatjaya_web/pesanan_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:berkatjaya_web/pesanan_screen.dart';
 import 'produk_page.dart';
 import 'kasir_screen.dart';
 import 'notatempo_screen.dart';
@@ -31,8 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     };
     return rolePermissions[role] ?? [];
   }
-
-  @override
+    @override
   void initState() {
     super.initState();
     _loadUserData();
@@ -50,12 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -87,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Stack(
         children: [
+          // Full Background Image with Blur
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -97,10 +91,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-                child: Container(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF003f7f).withOpacity(0.6),
+                        const Color(0xFF003f7f).withOpacity(0.8),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
+          // Content
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -258,8 +264,14 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isAllowed
-                ? [const Color(0xFF003f7f), const Color(0xFF0056b3)]
-                : [Colors.grey.shade600, Colors.grey.shade700],
+                ? [
+                    const Color(0xFF003f7f),
+                    const Color(0xFF0056b3),
+                  ]
+                : [
+                    Colors.grey.shade600,
+                    Colors.grey.shade700,
+                  ],
           ),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
@@ -272,57 +284,144 @@ class _HomeScreenState extends State<HomeScreen> {
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
+            BoxShadow(
+              color: isAllowed 
+                  ? const Color(0xFF003f7f).withOpacity(0.3)
+                  : Colors.grey.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
+        child: Stack(
+          children: [
+            // Decorative elements
+            Positioned(
+              top: -20,
+              right: -20,
+              child: Container(
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 1,
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -10,
+              left: -10,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+            // Main content
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Image.asset(
+                      category['imagePath'],
+                      height: 48,
+                      width: 48,
+                      color: Colors.white,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.apps_rounded,
+                          size: 48,
+                          color: Colors.white,
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    category['title'],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 2),
+                          color: Colors.black26,
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Lock indicator for restricted access
+            if (!isAllowed)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline,
+                    size: 16,
+                    color: Colors.white,
                   ),
                 ),
-                child: Image.asset(
-                  category['imagePath'],
-                  height: 48,
-                  width: 48,
-                  color: Colors.white,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.apps_rounded,
-                      size: 48,
-                      color: Colors.white,
-                    );
-                  },
+              ),
+            // Access indicator for allowed menus
+            if (isAllowed)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade500,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                category['title'],
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 2),
-                      color: Colors.black26,
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -378,10 +477,17 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.white,
         title: Row(
-          children: const [
-            Icon(Icons.payment, color: Color(0xFF003f7f)),
-            SizedBox(width: 12),
-            Text('Pilih Mode Kasir'),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF003f7f).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.payment, color: Color(0xFF003f7f)),
+            ),
+            const SizedBox(width: 12),
+            const Text('Pilih Mode Kasir'),
           ],
         ),
         content: Column(
@@ -421,9 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: const Color(0xFF003f7f).withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFF003f7f).withOpacity(0.2),
-          ),
+          border: Border.all(color: const Color(0xFF003f7f).withOpacity(0.2)),
         ),
         child: Row(
           children: [
