@@ -91,21 +91,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        const Color(0xFF003f7f).withOpacity(0.6),
-                        const Color(0xFF003f7f).withOpacity(0.8),
-                      ],
-                    ),
-                  ),
-                ),
+                child: Container(),
               ),
             ),
-          ),
+          ),           
           // Content
           SafeArea(
             child: SingleChildScrollView(
