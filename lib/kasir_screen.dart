@@ -222,7 +222,7 @@ class _KasirScreenState extends State<KasirScreen> {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')),
+              MaterialPageRoute(builder: (context) => HomeScreen()),
             );
           },
         ),

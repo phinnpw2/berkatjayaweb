@@ -30,7 +30,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:  HomeScreen(username: 'User', role: 'Owner', userDocId: '123'), // Menampilkan HomeScreen pertama kali
+      // home:  LoginPage(), 
+      // home: PesananScreen(),
+      home: HomeScreen(),
       // home: PesananScreen(),
       // home: KasirScreen(),
     );

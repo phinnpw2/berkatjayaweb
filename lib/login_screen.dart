@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
-import 'user_session.dart';
-
 
 void main() {
   runApp(MyApp());
@@ -34,10 +33,12 @@ class _LoginPageState extends State<LoginPage> {
     final password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Username dan password tidak boleh kosong"),
-        backgroundColor: Colors.red,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Username dan password tidak boleh kosong"),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -57,33 +58,35 @@ class _LoginPageState extends State<LoginPage> {
 
         final role = userData['role'] ?? 'Unknown';
         final namaUser = userData['username'] ?? 'User';
-        
-        UserSession.userDocId = userDocId;
-        UserSession.username = namaUser;
-        UserSession.role = role;
+
+        // Simpan ke SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', namaUser);
+        await prefs.setString('role', role);
+        await prefs.setString('userDocId', userDocId);
 
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomeScreen(
-              username: namaUser,
-              role: role,
-              userDocId: userDocId,
-            ),
+            builder: (context) => HomeScreen(),
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Username atau password salah"),
-          backgroundColor: Colors.red,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Username atau password salah"),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       print("Login error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Terjadi kesalahan, coba lagi"),
-        backgroundColor: Colors.red,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Terjadi kesalahan, coba lagi"),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -182,10 +185,11 @@ class _LoginPageState extends State<LoginPage> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _login,
                     style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.all<Color>(Color(0xFF003f7f)),
-                      padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
-                          EdgeInsets.symmetric(vertical: 15, horizontal: 40)),
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                      backgroundColor: MaterialStateProperty.all(Color(0xFF003f7f)),
+                      padding: MaterialStateProperty.all(
+                        EdgeInsets.symmetric(vertical: 15, horizontal: 40),
+                      ),
+                      shape: MaterialStateProperty.all(
                         RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
                     ),

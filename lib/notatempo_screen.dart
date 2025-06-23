@@ -288,7 +288,7 @@ void saveOrder() async {
       // Fungsi untuk kembali ke HomeScreen
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen(username: 'User', role: 'Kasir', userDocId: '123')), // Sesuaikan dengan data Anda
+        MaterialPageRoute(builder: (context) => HomeScreen()), // Sesuaikan dengan data Anda
       );
     },
   ),

@@ -1,344 +1,190 @@
-// import 'package:berkatjaya_web/notatempo_screen.dart';
-// import 'package:flutter/material.dart';
+// import 'dart:convert';
+// import 'package:berkatjaya_web/kasir_screen.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:intl/intl.dart'; // Mengimpor intl untuk format tanggal
-// import 'package:berkatjaya_web/cetaknota_screen.dart'; // Mengimpor CetakNotaScreen
-// import 'package:berkatjaya_web/statusnotatempo_screen.dart'; // Mengimpor StatusNotaTempoScreen
+// import 'package:flutter/material.dart';
+// import 'package:intl/intl.dart'; // Mengimpor intl package
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'notatempo_screen.dart'; // Impor NotaTempoScreen
 
-// class PesananScreen extends StatefulWidget {
-//   @override
-//   _PesananScreenState createState() => _PesananScreenState();
-// }
+// class CetakNotaScreen extends StatelessWidget {
+//   final String customerName; 
+//   final List<Map<String, dynamic>> orderMenu;
+//   final double totalAmount;
+//   final double change;
+//   final String paymentMethod;
+//   final String invoiceNumber;  // Menerima parameter invoiceNumber
+//   final Timestamp? originalTimestamp;  // Menyimpan timestamp asli, opsional
 
-// class _PesananScreenState extends State<PesananScreen> {
-//   String searchQuery = ""; // Variabel untuk pencarian nama pelanggan
-//   DateTime? startDate;
-//   DateTime? endDate;
-
-//   // Fungsi untuk memilih tanggal mulai
-//   Future<void> selectStartDate(BuildContext context) async {
-//     final DateTime? picked = await showDatePicker(
-//       context: context,
-//       initialDate: DateTime.now(),
-//       firstDate: DateTime(2000),
-//       lastDate: DateTime(2101),
-//     );
-//     if (picked != null && picked != startDate) {
-//       setState(() {
-//         startDate = picked; // Menyimpan tanggal yang dipilih
-//       });
-//     }
-//   }
-
-//   // Fungsi untuk memilih tanggal akhir
-//   Future<void> selectEndDate(BuildContext context) async {
-//     final DateTime? picked = await showDatePicker(
-//       context: context,
-//       initialDate: DateTime.now(),
-//       firstDate: DateTime(2000),
-//       lastDate: DateTime(2101),
-//     );
-//     if (picked != null && picked != endDate) {
-//       setState(() {
-//         endDate = picked; // Menyimpan tanggal yang dipilih
-//       });
-//     }
-//   }
-
-//   // Fungsi untuk menghapus pesanan dan mengembalikan stok produk
-//   void deleteOrder(String orderId, List<dynamic> orderMenu) async {
-//     try {
-//       // Menghapus pesanan dari Firestore
-//       await FirebaseFirestore.instance.collection('pesanan').doc(orderId).delete();
-
-//       // Mengembalikan stok produk yang telah dipesan
-//       for (var item in orderMenu) {
-//         final docRef = FirebaseFirestore.instance.collection('produk').doc(item['id']);
-//         final docSnapshot = await docRef.get();
-//         if (docSnapshot.exists) {
-//           final currentStock = docSnapshot.data()?['stok'] ?? 0;
-//           await docRef.update({'stok': currentStock + item['quantity']}); // Menambah stok sesuai dengan quantity yang dibeli
-//         }
-//       }
-
-//       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pesanan berhasil dihapus dan stok dikembalikan')));
-
-//     } catch (e) {
-//       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus pesanan: $e')));
-//     }
-//   }
+//   CetakNotaScreen({
+//     required this.customerName,
+//     required this.orderMenu,
+//     required this.totalAmount,
+//     required this.change,
+//     required this.paymentMethod,
+//     required this.invoiceNumber,  // Menerima parameter invoiceNumber
+//     this.originalTimestamp,  // Menambahkan timestamp asli sebagai opsional
+//   });
 
 //   @override
 //   Widget build(BuildContext context) {
+//     // Jika originalTimestamp ada, gunakan tanggal tersebut, jika tidak gunakan DateTime.now()
+//     DateTime orderDate = originalTimestamp?.toDate() ?? DateTime.now();  // Jika originalTimestamp tidak ada, gunakan waktu saat ini
+//     DateTime printDate = DateTime.now();  // Waktu nota dicetak (waktu sekarang)
+
 //     return Scaffold(
 //       appBar: AppBar(
-//         title: Text('Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-//         backgroundColor: Color(0xFF003f7f), // AppBar color matching RiwayatTransaksi screen
-//         elevation: 0,
-//         leading: IconButton(
-//           icon: Icon(Icons.arrow_back),
-//           color: Colors.white,
-//           onPressed: () {
-//             Navigator.pushReplacement(
-//               context,
-//               MaterialPageRoute(builder: (context) => NotaTempoScreen()),  // Menavigasi ke NotaTempoScreen
-//             );
-//           },
-//         ),
+//         title: Text('Cetak Nota', style: TextStyle(fontWeight: FontWeight.bold)),
+//         backgroundColor: Colors.deepPurpleAccent,
+//         elevation: 5,
 //       ),
-//       body: Column(
-//         children: [
-//           Padding(
-//             padding: const EdgeInsets.all(10.0),
-//             child: TextField(
-//               onChanged: (query) {
-//                 setState(() {
-//                   searchQuery = query.toLowerCase(); // Mengubah pencarian menjadi lowercase
-//                 });
-//               },
-//               decoration: InputDecoration(
-//                 labelText: 'Cari Nama Pelanggan',
-//                 labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.bold), 
-//                 border: OutlineInputBorder(
+//       body: SingleChildScrollView( 
+//         child: Container(
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(
+//               colors: [Colors.purple.shade100, Colors.blue.shade200], 
+//               begin: Alignment.topLeft,
+//               end: Alignment.bottomRight,
+//             ),
+//           ),
+//           child: Padding(
+//             padding: const EdgeInsets.all(16.0),
+//             child: Center(
+//               child: Container(
+//                 width: 350,
+//                 padding: EdgeInsets.all(16),
+//                 decoration: BoxDecoration(
+//                   border: Border.all(color: Colors.grey.shade300),
 //                   borderRadius: BorderRadius.circular(10),
-//                   borderSide: BorderSide(color: Color(0xFF003f7f)),
+//                   color: Colors.white,
 //                 ),
-//                 prefixIcon: Icon(Icons.search, color: Color(0xFF003f7f)),
-//               ),
-//             ),
-//           ),
-//           Row(
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: [
-//               ElevatedButton(
-//                 onPressed: () => selectStartDate(context),
-//                 child: Text(
-//                   startDate == null ? 'Pilih Tanggal Mulai' : DateFormat('dd-MM-yyyy').format(startDate!),
-//                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-//                 ),
-//                 style: ElevatedButton.styleFrom(
-//                   backgroundColor: Color(0xFF003f7f),
-//                   shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(30),
-//                   ),
-//                 ),
-//               ),
-//               SizedBox(width: 10),
-//               ElevatedButton(
-//                 onPressed: () => selectEndDate(context),
-//                 child: Text(
-//                   endDate == null ? 'Pilih Tanggal Akhir' : DateFormat('dd-MM-yyyy').format(endDate!),
-//                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-//                 ),
-//                 style: ElevatedButton.styleFrom(
-//                   backgroundColor: Color(0xFF003f7f),
-//                   shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(30),
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-//           Expanded(
-//             child: StreamBuilder<QuerySnapshot>(
-//               stream: FirebaseFirestore.instance
-//                   .collection('pesanan') // Ambil data dari koleksi 'pesanan'
-//                   .orderBy('timestamp', descending: true)
-//                   .snapshots(),
-//               builder: (context, snapshot) {
-//                 if (!snapshot.hasData) {
-//                   return Center(child: CircularProgressIndicator());
-//                 }
-
-//                 final pesananDocs = snapshot.data!.docs;
-//                 if (pesananDocs.isEmpty) {
-//                   return Center(child: Text('Belum ada pesanan'));
-//                 }
-
-//                 final filteredDocs = pesananDocs.where((doc) {
-//                   final pesananData = doc.data() as Map<String, dynamic>;
-//                   final customerName = pesananData['customerName'] ?? '';
-//                   final timestamp = pesananData['timestamp']?.toDate();
-//                   bool isInDateRange = true;
-
-//                   if (startDate != null && timestamp != null) {
-//                     isInDateRange = timestamp.isAfter(startDate!);
-//                   }
-//                   if (endDate != null && timestamp != null) {
-//                     isInDateRange = isInDateRange && timestamp.isBefore(endDate!.add(Duration(days: 1)));
-//                   }
-
-//                   return customerName.toLowerCase().contains(searchQuery) && isInDateRange;
-//                 }).toList();
-
-//                 return ListView.builder(
-//                   itemCount: filteredDocs.length,
-//                   itemBuilder: (context, index) {
-//                     final pesananData = filteredDocs[index].data() as Map<String, dynamic>;
-//                     final customerName = pesananData['customerName'] ?? 'Tidak ada nama';
-//                     final orderMenu = pesananData['orderDetails'] as List<dynamic>;
-//                     final orderId = filteredDocs[index].id;
-//                     final timestamp = pesananData['timestamp']?.toDate() ?? DateTime.now();
-//                     final formattedTime = DateFormat('yyyy-MM-dd HH:mm').format(timestamp);
-//                     final invoiceNumber = pesananData['invoiceNumber'];
-
-//                     return GestureDetector(
-//                       onTap: () {
-//                         showDialog(
-//                           context: context,
-//                           builder: (context) => AlertDialog(
-//                             title: Text('Rincian Produk'),
-//                             content: Container(
-//                               height: 250,
-//                               child: SingleChildScrollView(
-//                                 child: Column(
-//                                   crossAxisAlignment: CrossAxisAlignment.start,
-//                                   children: [
-//                                     Text('Pelanggan: $customerName', style: TextStyle(fontWeight: FontWeight.bold)),
-//                                     Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontWeight: FontWeight.bold)),
-//                                     SizedBox(height: 10),
-//                                     Text('Rincian Produk:'), 
-//                                     SizedBox(height: 10),
-//                                     Column(
-//                                       children: List.generate(orderMenu.length, (i) {
-//                                         var product = orderMenu[i];
-//                                         double totalPrice = product['price'] * product['quantity'];
-//                                         return Card(
-//                                           margin: EdgeInsets.only(bottom: 10),
-//                                           elevation: 5,
-//                                           color: Colors.grey.shade300,
-//                                           child: Padding(
-//                                             padding: const EdgeInsets.all(8.0),
-//                                             child: Column(
-//                                               crossAxisAlignment: CrossAxisAlignment.start,
-//                                               children: [
-//                                                 Text(product['name'], style: TextStyle(fontWeight: FontWeight.bold)),
-//                                                 SizedBox(height: 5),
-//                                                 Text('Jumlah: ${product['quantity']}'),
-//                                                 Text('Harga per Unit: Rp ${product['price']}'),
-//                                                 Text('Total: Rp ${totalPrice}'),
-//                                               ],
-//                                             ),
-//                                           ),
-//                                         );
-//                                       }),
-//                                     ),
-//                                   ],
-//                                 ),
-//                               ),
-//                             ),
-//                             actions: [
-//                               TextButton(
-//                                 onPressed: () {
-//                                   Navigator.pop(context);
-//                                 },
-//                                 child: Text('Tutup'),
-//                               ),
-//                             ],
-//                           ),
-//                         );
-//                       },
-//                       child: Card(
-//                         elevation: 5,
-//                         margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-//                         color: Colors.grey.shade300,
-//                         child: Padding(
-//                           padding: const EdgeInsets.all(12.0),
-//                           child: Column(
-//                             crossAxisAlignment: CrossAxisAlignment.start,
-//                             children: [
-//                               Text('$customerName - Pesanan pada $formattedTime', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
-//                               SizedBox(height: 10),
-//                               Text('Nomor Nota: $invoiceNumber', style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-//                               SizedBox(height: 10),
-//                               Text('Total: Rp ${(pesananData['total'] ?? 0.0).toStringAsFixed(2)}', style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-//                               SizedBox(height: 10),
-//                               ElevatedButton(
-//   onPressed: () async {
-//     double totalAmount = pesananData['total'] ?? 0.0;
-//     double change = pesananData['change'] ?? 0.0;
-//     String paymentMethod = pesananData['paymentMethod'] ?? 'Tidak Diketahui';
-//     List<Map<String, dynamic>> formattedOrderMenu = List<Map<String, dynamic>>.from(orderMenu);
-
-//     // Ambil timestamp asli dari pesanan pertama kali dibuat (misalnya tanggal 12 April)
-//     Timestamp originalTimestamp = pesananData['timestamp'];  // Pastikan Anda menyimpan timestamp saat pesanan pertama kali dibuat
-
-//     try {
-//       // Menyimpan data ke koleksi 'statusnotatempo' 
-//       await FirebaseFirestore.instance.collection('statusnotatempo').add({
-//         'customerName': customerName,
-//         'orderDetails': formattedOrderMenu,
-//         'total': totalAmount,
-//         'change': change,
-//         'paymentMethod': paymentMethod,
-//         'status': 'Belum Lunas',
-//         'invoiceNumber': invoiceNumber,
-//         'timestamp': originalTimestamp,  // Gunakan timestamp yang sama
-//       });
-
-//       // Ambil ID dokumen pesanan yang valid
-//       String orderId = filteredDocs[index].id;  // Ambil orderId yang benar
-
-//       // Verifikasi keberadaan dokumen sebelum menghapus
-//       final docRef = FirebaseFirestore.instance.collection('pesanan').doc(orderId);
-//       final docSnapshot = await docRef.get();
-
-//       if (docSnapshot.exists) {
-//         // Hapus data dari koleksi 'pesanan' setelah dipindahkan
-//         await docRef.delete();
-
-//         // Navigasi ke cetaknota_screen.dart setelah data dipindahkan dan dihapus
-//         Navigator.push(
-//           context,
-//           MaterialPageRoute(
-//             builder: (context) => CetakNotaScreen(
-//               customerName: customerName,
-//               orderMenu: formattedOrderMenu,
-//               totalAmount: totalAmount,
-//               change: change,
-//               paymentMethod: paymentMethod,
-//               invoiceNumber: invoiceNumber,
-//               originalTimestamp: originalTimestamp,  // Kirim timestamp yang sama ke halaman CetakNotaScreen
-//             ),
-//           ),
-//         );
-//       } else {
-//         // Menampilkan error jika dokumen tidak ditemukan
-//         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dokumen pesanan tidak ditemukan')));
-//       }
-//     } catch (e) {
-//       // Menangani error secara umum
-//       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memindahkan data: $e')));
-//     }
-//   },
-//   child: Text(
-//     'Cetak Nota',
-//     style: TextStyle(
-//       color: Colors.white,
-//       fontWeight: FontWeight.bold,
-//     ),
-//   ),
-//   style: ElevatedButton.styleFrom(
-//     backgroundColor: Color(0xFF003f7f),
-//     padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-//     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-//   ),
-// ),
-//                             ],
+//                 child: Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     // Logo Toko
+//                     Container(
+//                       alignment: Alignment.center,
+//                       child: Text(
+//                         'LOGO TOKO', 
+//                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+//                       ),
+//                     ),
+//                     SizedBox(height: 10),
+//                     // Nama Toko dan Alamat
+//                     Text(
+//                       'Toko Berkat Jaya\nJl. Slamet Riady', 
+//                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+//                       textAlign: TextAlign.center,
+//                     ),
+//                     SizedBox(height: 10),
+//                     // Tanggal dan Waktu
+//                     Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         Text(
+//                           originalTimestamp != null ? 'Tanggal Nota Dibuat: ${DateFormat('yyyy-MM-dd').format(orderDate)}' : '', 
+//                           style: TextStyle(fontSize: 14, color: Colors.black),
+//                         ), 
+//                         SizedBox(height: 5),
+//                         Text(
+//                            'Tanggal Cetak: ${DateFormat('yyyy-MM-dd').format(printDate)}',
+//                           style: TextStyle(fontSize: 14, color: Colors.black),
+//                         ),                     
+//                       ],
+//                     ),
+//                     SizedBox(height: 15),
+//                     // Nomor Nota dan Kasir ditempatkan di atas garis
+//                     Row(
+//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                       children: [
+//                         Text('Nomor Nota: ${invoiceNumber}', style: TextStyle(fontSize: 14, color: Colors.black)),
+//                         Text('Kasir: Evy', style: TextStyle(fontSize: 14, color: Colors.black)), // Kasir lebih kecil dan abu-abu
+//                       ],
+//                     ),
+//                     SizedBox(height: 10),
+//                     // Garis Pemisah
+//                     SizedBox(height: 15),
+//                     Divider(color: Colors.black),
+//                     SizedBox(height: 10),
+                    
+//                     // Rincian Produk
+//                     Text('Detail Pembelian:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+//                     SizedBox(height: 10),
+//                     Container(
+//                       decoration: BoxDecoration(
+//                         border: Border.all(color: Colors.grey.shade300),
+//                         borderRadius: BorderRadius.circular(8),
+//                         color: Colors.grey.shade100,
+//                       ),
+//                       child: Column(
+//                         children: orderMenu.map((item) {
+//                           return ListTile(
+//                             title: Text('${item['name']} (x${item['quantity']})', style: TextStyle(fontSize: 14, color: Colors.black)),
+//                             subtitle: Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}', style: TextStyle(fontSize: 14, color: Colors.black)),
+//                           );
+//                         }).toList(),
+//                       ),
+//                     ),
+//                     SizedBox(height: 10),
+//                     Divider(color: Colors.black),
+//                     Text('Nama Pelanggan: $customerName', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+//                     SizedBox(height: 10),
+//                     Text('Total Harga: Rp ${totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+//                     SizedBox(height: 10),
+//                     Text('Pengembalian: Rp ${change.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+//                     SizedBox(height: 15),
+//                     Text('Metode Pembayaran : $paymentMethod', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+//                     SizedBox(height: 20),
+//                     // Tombol Transaksi Baru
+//                     Center(
+//                       child: ElevatedButton(
+//                         onPressed: () async {
+//                           // Arahkan ke KasirScreen untuk transaksi baru
+//                           Navigator.pushAndRemoveUntil(
+//                             context,
+//                             MaterialPageRoute(builder: (context) => KasirScreen()), 
+//                             (Route<dynamic> route) => false, 
+//                           );
+//                         },
+//                         child: Text('Transaksi Baru', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+//                         style: ElevatedButton.styleFrom(
+//                           backgroundColor: Colors.green,  // Mengubah warna tombol menjadi hijau
+//                           padding: EdgeInsets.symmetric(horizontal: 80, vertical: 12),
+//                           shape: RoundedRectangleBorder(
+//                             borderRadius: BorderRadius.circular(30), // Rounded corners
 //                           ),
 //                         ),
 //                       ),
-//                     );
-//                   },
-//                 );
-//               },
+//                     ),
+//                     SizedBox(height: 20),
+//                     // Tombol Nota Tempo
+//                     Center(
+//                       child: ElevatedButton(
+//                         onPressed: () async {
+//                           // Arahkan ke NotaTempoScreen
+//                           Navigator.push(
+//                             context,
+//                             MaterialPageRoute(builder: (context) => NotaTempoScreen()),
+//                           );
+//                         },
+//                         child: Text('Nota Tempo', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+//                         style: ElevatedButton.styleFrom(
+//                           backgroundColor: Colors.orange,  // Mengubah warna tombol menjadi oranye
+//                           padding: EdgeInsets.symmetric(horizontal: 80, vertical: 12),
+//                           shape: RoundedRectangleBorder(
+//                             borderRadius: BorderRadius.circular(30), // Rounded corners
+//                           ),
+//                         ),
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               ),
 //             ),
 //           ),
-//         ],
+//         ),
 //       ),
 //     );
 //   }
 // }
 
-
-// Pesanan screen
+// cetaknota
