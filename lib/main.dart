@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
       ),
       // home:  LoginPage(), 
       // home: PesananScreen(),
-      home: HomeScreen(),
+      home: LoginPage(),
       // home: PesananScreen(),
       // home: KasirScreen(),
     );
