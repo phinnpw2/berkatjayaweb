@@ -1,16 +1,7 @@
-import 'package:berkatjaya_web/kasir_screen.dart';
-import 'package:berkatjaya_web/laporan_screen.dart';
 import 'package:berkatjaya_web/login_screen.dart';
-import 'package:berkatjaya_web/notatempo_screen.dart';
-import 'package:berkatjaya_web/pembayaran_screen.dart';
-import 'package:berkatjaya_web/pesanan_screen.dart';
-import 'package:berkatjaya_web/produk_page.dart';
-import 'package:berkatjaya_web/riwayattransaksi_screen.dart';
-import 'package:berkatjaya_web/statusnotatempo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'home_screen.dart';  // HomeScreen baru yang akan ditampilkan pertama kali
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,11 +21,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      // home:  LoginPage(), 
-      // home: PesananScreen(),
       home: LoginPage(),
-      // home: PesananScreen(),
-      // home: KasirScreen(),
     );
   }
 }
