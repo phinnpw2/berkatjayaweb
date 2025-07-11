@@ -21,12 +21,9 @@ class PengaturanScreen extends StatefulWidget {
 class _PengaturanScreenState extends State<PengaturanScreen> {
   final _editUsernameController = TextEditingController();
   final _editPasswordController = TextEditingController();
-  final _editRoleController = TextEditingController();
-
   final _newUsernameController = TextEditingController();
   final _newPasswordController = TextEditingController();
   String _newRole = 'Kasir';
-
   bool _isLoading = false;
   final _availableRoles = ['Owner', 'Kasir', 'Kepala Gudang', 'Sales'];
 
@@ -34,69 +31,45 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   void initState() {
     super.initState();
     _editUsernameController.text = widget.username;
-    _editRoleController.text = widget.role;
-    _editPasswordController.text = '';
+  }
+
+  Future<List<Map<String, dynamic>>> _getAllUsers() async {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('user').get();
+    return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
   }
 
   void _editAkun() async {
-    final username = _editUsernameController.text.trim();
-    final password = _editPasswordController.text.trim();
-    final role = _editRoleController.text.trim();
-
-    if (username.isEmpty || password.isEmpty || role.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Semua kolom harus diisi')),
-      );
+    if (_editUsernameController.text.trim().isEmpty || _editPasswordController.text.trim().isEmpty) {
+      _showSnackBar('Semua kolom harus diisi');
       return;
     }
-
     setState(() => _isLoading = true);
-
-    await FirebaseFirestore.instance
-        .collection('user')
-        .doc(widget.userDocId)
-        .update({
-      'username': username,
-      'password': password,
-      'role': role,
+    await FirebaseFirestore.instance.collection('user').doc(widget.userDocId).update({
+      'username': _editUsernameController.text.trim(),
+      'password': _editPasswordController.text.trim(),
     });
-
     setState(() => _isLoading = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Akun berhasil diperbarui')),
-    );
+    _showSnackBar('Akun berhasil diperbarui');
   }
 
   void _tambahAkunBaru() async {
-    final username = _newUsernameController.text.trim();
-    final password = _newPasswordController.text.trim();
-
-    if (username.isEmpty || password.isEmpty || _newRole.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Semua data harus diisi')),
-      );
+    if (_newUsernameController.text.trim().isEmpty || _newPasswordController.text.trim().isEmpty) {
+      _showSnackBar('Semua data harus diisi');
       return;
     }
-
     setState(() => _isLoading = true);
-
     await FirebaseFirestore.instance.collection('user').add({
-      'username': username,
-      'password': password,
+      'username': _newUsernameController.text.trim(),
+      'password': _newPasswordController.text.trim(),
       'role': _newRole,
     });
-
     setState(() {
       _newUsernameController.clear();
       _newPasswordController.clear();
       _newRole = 'Kasir';
       _isLoading = false;
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Akun baru berhasil ditambahkan')),
-    );
+    _showSnackBar('Akun baru berhasil ditambahkan');
   }
 
   void _logout() async {
@@ -106,24 +79,62 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
         title: Text('Konfirmasi Logout'),
         content: Text('Apakah Anda yakin ingin logout?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Batal'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Batal')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF003f7f)),
             child: Text('Logout'),
           ),
         ],
       ),
     );
-
     if (shouldLogout == true) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginPage()));
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Color(0xFF003f7f)),
+    );
+  }
+
+  Widget _buildCard({required String title, required Widget child}) {
+    return Card(
+      elevation: 4,
+      margin: EdgeInsets.only(bottom: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF003f7f))),
+            SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, {bool obscureText = false, bool readOnly = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Color(0xFF003f7f), width: 2),
+          ),
+        ),
+        obscureText: obscureText,
+        readOnly: readOnly,
+      ),
+    );
   }
 
   @override
@@ -133,83 +144,132 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Pengaturan'),
-        backgroundColor: Colors.deepPurpleAccent,
+        backgroundColor: Color(0xFF003f7f),
+        foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Logout',
-          )
+          IconButton(icon: Icon(Icons.logout), onPressed: _logout, tooltip: 'Logout'),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('👤 Akun Anda', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _editUsernameController,
-              decoration: InputDecoration(labelText: 'Username'),
-              readOnly: !isOwner,
-            ),
-            TextField(
-              controller: _editPasswordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-              readOnly: !isOwner,
-            ),
-            TextField(
-              controller: _editRoleController,
-              decoration: InputDecoration(labelText: 'Role'),
-              readOnly: true,
-            ),
-            const SizedBox(height: 10),
-            if (isOwner)
-              ElevatedButton(
-                onPressed: _isLoading ? null : _editAkun,
-                child: Text('Simpan Perubahan'),
+            _buildCard(
+              title: 'Akun Anda',
+              child: Column(
+                children: [
+                  _buildTextField(_editUsernameController, 'Username', readOnly: !isOwner),
+                  _buildTextField(_editPasswordController, 'Password', obscureText: true, readOnly: !isOwner),
+                  _buildTextField(TextEditingController(text: widget.role), 'Role', readOnly: true),
+                  if (isOwner)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _editAkun,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF003f7f),
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text('Simpan Perubahan', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                ],
               ),
-
-            const SizedBox(height: 32),
-
+            ),
             if (isOwner) ...[
-              Text('➕ Tambah Akun Baru', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _newUsernameController,
-                decoration: InputDecoration(labelText: 'Username Baru'),
+              _buildCard(
+                title: 'Tambah Akun Baru',
+                child: Column(
+                  children: [
+                    _buildTextField(_newUsernameController, 'Username Baru'),
+                    _buildTextField(_newPasswordController, 'Password Baru', obscureText: true),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: DropdownButtonFormField<String>(
+                        value: _newRole,
+                        decoration: InputDecoration(
+                          labelText: 'Role',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Color(0xFF003f7f), width: 2),
+                          ),
+                        ),
+                        onChanged: (val) => setState(() => _newRole = val!),
+                        items: _availableRoles.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      ),
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _tambahAkunBaru,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF003f7f),
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text('Buat Akun Baru', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              TextField(
-                controller: _newPasswordController,
-                decoration: InputDecoration(labelText: 'Password Baru'),
-                obscureText: true,
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _newRole,
-                decoration: InputDecoration(labelText: 'Role'),
-                onChanged: (val) {
-                  if (val != null) setState(() => _newRole = val);
-                },
-                items: _availableRoles.map((e) {
-                  return DropdownMenuItem(value: e, child: Text(e));
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _tambahAkunBaru,
-                child: Text('Buat Akun Baru'),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                icon: Icon(Icons.list),
-                label: Text('Lihat Semua Akun Terdaftar'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
-                onPressed: () {
-              
-                },
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.list, color: Colors.white),
+                  label: Text('Lihat Semua Akun Terdaftar', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF003f7f).withOpacity(0.8),
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    final users = await _getAllUsers();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      builder: (context) => DraggableScrollableSheet(
+                        expand: false,
+                        initialChildSize: 0.7,
+                        maxChildSize: 0.95,
+                        minChildSize: 0.4,
+                        builder: (context, scrollController) {
+                          return Container(
+                            padding: EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                Text('Daftar Semua Akun', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF003f7f))),
+                                SizedBox(height: 12),
+                                Expanded(
+                                  child: ListView.builder(
+                                    controller: scrollController,
+                                    itemCount: users.length,
+                                    itemBuilder: (context, index) {
+                                      final user = users[index];
+                                      return Card(
+                                        margin: EdgeInsets.symmetric(vertical: 6),
+                                        child: ListTile(
+                                          leading: Icon(Icons.person, color: Color(0xFF003f7f)),
+                                          title: Text(user['username'] ?? 'Tanpa Username'),
+                                          subtitle: Text('Role: ${user['role'] ?? 'Tidak Diketahui'}'),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
             ]
           ],

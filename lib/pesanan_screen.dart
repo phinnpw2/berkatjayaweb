@@ -361,6 +361,7 @@ class _PesananScreenState extends State<PesananScreen> with SingleTickerProvider
           paymentMethod: data['paymentMethod'] ?? '',
           invoiceNumber: data['invoiceNumber'],
           originalTimestamp: data['timestamp'] as Timestamp,
+          blockBackButton: false,
         ),
       ),
     );

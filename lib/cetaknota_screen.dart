@@ -1,12 +1,11 @@
-import 'dart:convert';
+import 'package:berkatjaya_web/kasir_screen.dart';
+import 'package:berkatjaya_web/notatempo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
-import 'kasir_screen.dart';
-import 'notatempo_screen.dart';
 
 class CetakNotaScreen extends StatelessWidget {
   final String customerName;
@@ -16,7 +15,9 @@ class CetakNotaScreen extends StatelessWidget {
   final String paymentMethod;
   final String invoiceNumber;
   final Timestamp? originalTimestamp;
+  final bool blockBackButton;  // Parameter baru untuk mengatur apakah tombol back diblokir
 
+  // Memberikan nilai default false untuk blockBackButton
   CetakNotaScreen({
     required this.customerName,
     required this.orderMenu,
@@ -25,306 +26,370 @@ class CetakNotaScreen extends StatelessWidget {
     required this.paymentMethod,
     required this.invoiceNumber,
     this.originalTimestamp,
+    this.blockBackButton = false,  // Default false jika tidak diberikan
   });
 
   Future<void> _printPdf(BuildContext context) async {
-    print('👉 _printPdf terpanggil...');
     final pdf = pw.Document();
-
     final orderDate = originalTimestamp?.toDate() ?? DateTime.now();
-    final printDate = DateTime.now();
+
+    // Menyesuaikan ukuran halaman menjadi 47mm untuk lebar dan panjang otomatis sesuai isi
+    final itemHeight = 10.0; // Tentukan tinggi setiap item yang lebih besar
+    final baseHeight = 70.0; // Untuk header dan informasi dasar lainnya
+    final pageHeight = baseHeight + (orderMenu.length * itemHeight);
 
     pdf.addPage(
-  pw.Page(
-    pageFormat: PdfPageFormat.a4,
-    build: (pw.Context ctx) {
-      return pw.Center(
-        child: pw.Container(
-          width: 350,
-          padding: const pw.EdgeInsets.all(16),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey),
-            borderRadius: pw.BorderRadius.circular(10),
-          ),
-          child: pw.Column(
+      pw.Page(
+        pageFormat: PdfPageFormat(47 * PdfPageFormat.mm, pageHeight * PdfPageFormat.mm), // Ukuran kertas 47mm x panjang dinamis
+        build: (pw.Context ctx) {
+          return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Logo
+              // Teks judul dan alamat
               pw.Center(
                 child: pw.Text(
-                  'LOGO TOKO',
+                  'TOKO BERKAT JAYA',
                   style: pw.TextStyle(
-                    fontSize: 20,
+                    fontSize: 10, // Memperbesar font
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
               ),
-              pw.SizedBox(height: 8),
-              // Alamat
               pw.Center(
                 child: pw.Text(
-                  'Toko Berkat Jaya\nJl. Slamet Riady',
-                  textAlign: pw.TextAlign.center,
-                  style: pw.TextStyle(
-                    fontSize: 14,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+                  'Jl. Slamet Riady',
+                  style: pw.TextStyle(fontSize: 8), // Memperbesar sedikit
                 ),
               ),
-              pw.SizedBox(height: 10),
-              // Tanggal
-              if (originalTimestamp != null)
-                pw.Text(
-                  'Tanggal Nota Dibuat: ${DateFormat('yyyy-MM-dd').format(orderDate)}',
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
-              pw.Text(
-                'Tanggal Cetak: ${DateFormat('yyyy-MM-dd').format(printDate)}',
-                style: const pw.TextStyle(fontSize: 10),
-              ),
-              pw.SizedBox(height: 10),
-              // Info Nota dan Kasir
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Nomor Nota: $invoiceNumber', style: pw.TextStyle(fontSize: 10)),
-                  pw.Text('Kasir: Evy', style: pw.TextStyle(fontSize: 10)),
-                ],
-              ),
-              pw.Divider(),
-              // Detail Pembelian
-              pw.Text(
-                'Detail Pembelian:',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
+              pw.Center(
+                child: pw.Text(
+                  '11 Ilir Palembang',
+                  style: pw.TextStyle(fontSize: 8), // Memperbesar sedikit
                 ),
               ),
               pw.SizedBox(height: 5),
-              // Tabel
-              pw.Table(
-                border: pw.TableBorder.all(
-                  color: PdfColors.black,
-                  width: 0.5,
-                ),
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(2),
-                  1: const pw.FlexColumnWidth(1),
-                  2: const pw.FlexColumnWidth(1),
-                },
+              // Nota, Tanggal dan Kasir
+              pw.Row(
                 children: [
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfColors.grey200),
-                    children: [
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(5),
-                        child: pw.Text(
-                          'Produk',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
-                        ),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(5),
-                        child: pw.Text('Jumlah', style: pw.TextStyle(fontSize: 10)),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(5),
-                        child: pw.Text('Subtotal', style: pw.TextStyle(fontSize: 10)),
-                      ),
-                    ],
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      'Nota: $invoiceNumber',
+                      style: pw.TextStyle(fontSize: 6),
+                    ),
                   ),
-                  ...orderMenu.map(
-                    (item) => pw.TableRow(
-                      children: [
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(5),
-                          child: pw.Text(
-                            item['name'],
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                        ),
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(5),
-                          child: pw.Text(
-                            'x${item['quantity']}',
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                        ),
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.all(5),
-                          child: pw.Text(
-                            'Rp ${(item['price'] * item['quantity']).toStringAsFixed(0)}',
-                            style: pw.TextStyle(fontSize: 10),
-                          ),
-                        ),
-                      ],
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      'Tanggal: ${DateFormat('dd/MM/yyyy').format(orderDate)}',
+                      style: pw.TextStyle(fontSize: 6),
                     ),
                   ),
                 ],
               ),
-              pw.SizedBox(height: 10),
-              // Informasi lain
-              pw.Text('Nama Pelanggan: $customerName', style: pw.TextStyle(fontSize: 10)),
-              pw.Text('Total Harga: Rp ${totalAmount.toStringAsFixed(0)}', style: pw.TextStyle(fontSize: 10)),
-              pw.Text('Pengembalian: Rp ${change.toStringAsFixed(0)}', style: pw.TextStyle(fontSize: 10)),
-              pw.Text('Metode Pembayaran: $paymentMethod', style: pw.TextStyle(fontSize: 10)),
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      'Kasir: Evy',
+                      style: pw.TextStyle(fontSize: 6),
+                    ),
+                  ),
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      'Waktu   : ${DateFormat('HH:mm').format(orderDate)}',
+                      style: pw.TextStyle(fontSize: 6), // Menambahkan waktu di sebelah kanan
+                    ),
+                  ),
+                ],
+              ),
+              pw.Divider(thickness: 0.5),
+              // Bagian Pesanan: produk, jumlah, dan harga per produk
+              ...orderMenu.map((item) => pw.Padding(
+                padding: pw.EdgeInsets.only(bottom: 5), // Menambah jarak antar produk
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.start,
+                      children: [
+                        pw.Expanded(
+                          flex: 2,
+                          child: pw.Text(
+                            '${item['name']} x${item['quantity']}',
+                            style: pw.TextStyle(fontSize: 7),
+                          ),
+                        ),
+                        pw.Expanded(
+                          flex: 1,
+                          child: pw.Text(
+                            'Rp. ${_formatCurrency(item['price'] * item['quantity'])}',
+                            style: pw.TextStyle(fontSize: 7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Rp. ${_formatCurrency(item['price'])}',
+                      style: pw.TextStyle(fontSize: 6), // Menampilkan harga per item
+                    ),
+                  ],
+                ),
+              )),
+
+              pw.Divider(thickness: 0.5),
+              // Total dan informasi pembayaran
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    flex: 3,
+                    child: pw.Text(
+                      'Total:',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text(
+                      'Rp. ${_formatCurrency(totalAmount)}',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                      textAlign: pw.TextAlign.right, // Membuat total lebih ke kanan
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Pelanggan: $customerName',
+                style: pw.TextStyle(fontSize: 6),
+              ),
+              pw.SizedBox(height: 2), // Jarak antar informasi
+              pw.Text(
+                'Pembayaran: $paymentMethod',
+                style: pw.TextStyle(fontSize: 6),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Kembalian: Rp. ${_formatCurrency(change)}',
+                style: pw.TextStyle(fontSize: 6),
+              ),
+              pw.SizedBox(height: 5),
+              // Bagian Terima Kasih
+              pw.Center(
+                child: pw.Text(
+                  'Terima Kasih',
+                  style: pw.TextStyle(fontSize: 6),
+                ),
+              ),
             ],
-          ),
-        ),
-      );
-    },
-  ),
-);
-
-
-    final bytes = await pdf.save();
-    print('📄 PDF selesai dibuat (${bytes.length} bytes), memanggil Printing.layoutPdf...');
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => bytes,
+          );
+        },
+      ),
     );
-    print('✅ layoutPdf selesai dieksekusi.');
+
+    // Menampilkan preview print langsung
+    final bytes = await pdf.save();
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => bytes, // Menyediakan byte array PDF
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    DateTime orderDate = originalTimestamp?.toDate() ?? DateTime.now();
-    DateTime printDate = DateTime.now();
+  String _formatCurrency(double amount) {
+    final formatter = NumberFormat('#,##0', 'id_ID');
+    return formatter.format(amount);
+  }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cetak Nota', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.deepPurpleAccent,
-        elevation: 5,
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.purple.shade100, Colors.blue.shade200],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+   @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        if (blockBackButton) {
+          // Jika flag true (transaksi selesai), blokir tombol back
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Transaksi sudah selesai, tidak bisa kembali'),
+              backgroundColor: Colors.orange,
             ),
+          );
+          return false;  // Blokir aksi kembali
+        }
+        return true;  // Izinkan kembali jika flag false
+      },
+      child: Scaffold(
+      appBar: AppBar(
+        title: Text('Ringkasan Pesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Color(0xFF003f7f),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF003f7f).withOpacity(0.1), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Center(
-              child: Container(
-                width: 350,
-                padding: const EdgeInsets.all(16),
+        ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(10),
                   color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10, offset: Offset(0, 5))],
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.check_circle, color: Color(0xFF003f7f), size: 50),
+                    SizedBox(height: 10),
+                    Text('Pesanan Berhasil', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF003f7f))),
+                    SizedBox(height: 5),
+                    Text('Nota #$invoiceNumber', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    Text('${DateFormat('dd MMMM yyyy, HH:mm').format(originalTimestamp?.toDate() ?? DateTime.now())}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10, offset: Offset(0, 5))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Text(
-                        'LOGO TOKO',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: Text(
-                        'Toko Berkat Jaya\nJl. Slamet Riady',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (originalTimestamp != null)
-                      Text('Tanggal Nota Dibuat: ${DateFormat('yyyy-MM-dd').format(orderDate)}'),
-                    Text('Tanggal Cetak: ${DateFormat('yyyy-MM-dd').format(printDate)}'),
-                    const SizedBox(height: 15),
+                    Text('Detail Pesanan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003f7f))),
+                    SizedBox(height: 15),
+                    ...orderMenu.map((item) => Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('${item['name']} x${item['quantity']}', style: TextStyle(fontSize: 14)),
+                              ),
+                              Text('Rp ${(item['price'] * item['quantity']).toStringAsFixed(0)}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        )),
+                    Divider(color: Colors.grey[300]),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Nomor Nota: $invoiceNumber'),
-                        const Text('Kasir: Evy'),
+                        Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text('Rp ${totalAmount.toStringAsFixed(0)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003f7f))),
                       ],
-                    ),
-                    const Divider(),
-                    const Text('Detail Pembelian:',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    ...orderMenu.map((item) {
-                      return ListTile(
-                        title: Text('${item['name']} (x${item['quantity']})'),
-                        subtitle: Text(
-                            'Rp ${(item['price'] * item['quantity']).toStringAsFixed(2)}'),
-                      );
-                    }).toList(),
-                    const Divider(),
-                    Text('Nama Pelanggan: $customerName'),
-                    Text('Total Harga: Rp ${totalAmount.toStringAsFixed(0)}'),
-                    Text('Pengembalian: Rp ${change.toStringAsFixed(0)}'),
-                    Text('Metode Pembayaran : $paymentMethod'),
-                    const SizedBox(height: 20),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => KasirScreen()),
-                            (route) => false,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text('Transaksi Baru'),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => NotaTempoScreen()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text('Nota Tempo'),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _printPdf(context); // panggil print
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text('Cetak Nota'),
-                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+              SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10, offset: Offset(0, 5))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Informasi Pembayaran', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003f7f))),
+                    SizedBox(height: 15),
+                    _buildInfoRow('Pelanggan', customerName),
+                    _buildInfoRow('Pembayaran', paymentMethod),
+                    _buildInfoRow('Kembalian', 'Rp ${change.toStringAsFixed(0)}'),
+                  ],
+                ),
+              ),
+              SizedBox(height: 30),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _printPdf(context),
+                      icon: Icon(Icons.print, color: Colors.white),
+                      label: Text('Cetak Nota', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF003f7f),
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => KasirScreen()),
+                        (route) => false,
+                      ),
+                      icon: Icon(Icons.add, color: Colors.white),
+                      label: Text('Transaksi Baru', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => NotaTempoScreen()),
+                      ),
+                      icon: Icon(Icons.schedule, color: Colors.white),
+                      label: Text('Nota Tempo', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
+      ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }

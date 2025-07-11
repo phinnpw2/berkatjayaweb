@@ -99,51 +99,52 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
   }
 
   // Fungsi untuk menyimpan transaksi ke Firestore
-  Future<void> saveTransactionToFirestore() async {
-    // Pastikan pembayaran valid sebelum melanjutkan
-    if (!isAmountPaidValid()) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang yang dibayar tidak cukup')));
-      return;  // Jangan lanjutkan jika uang yang dibayar tidak cukup
-    }
-
-    Map<String, dynamic> transaction = {
-      'customerName': customerNameController.text,
-      'orderDetails': widget.orderMenu,
-      'totalAmount': totalAmount,
-      'paymentMethod': paymentMethod, // Menyimpan metode pembayaran
-      'change': change,
-      'status_transaksi': 'selesai', // Menandakan bahwa transaksi telah selesai
-      'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
-    };
-
-    try {
-      // Simpan transaksi ke Firestore
-      await FirebaseFirestore.instance.collection('riwayattransaksi').add(transaction);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil disimpan di Firestore!')));
-
-      // Setelah transaksi berhasil disimpan, update nomor invoice di preferences
-      await _updateInvoiceNumberInPreferences(invoiceNumber);
-
-      // Pindah ke halaman cetak nota setelah transaksi selesai
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CetakNotaScreen(
-            orderMenu: widget.orderMenu, 
-            totalAmount: totalAmount,
-            change: change,
-            paymentMethod: paymentMethod,
-            customerName: customerNameController.text,
-            invoiceNumber: invoiceNumber, // Pastikan nomor nota yang terbaru dikirim
-          ),
-        ),
-      );
-    } catch (e) {
-      print("Error saving transaction to Firestore: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan transaksi di Firestore!')));
-    }
+  void saveTransactionToFirestore() async {
+  // Pastikan pembayaran valid sebelum melanjutkan
+  if (!isAmountPaidValid()) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Uang yang dibayar tidak cukup')));
+    return;  // Jangan lanjutkan jika uang yang dibayar tidak cukup
   }
+
+  Map<String, dynamic> transaction = {
+    'customerName': customerNameController.text,
+    'orderDetails': widget.orderMenu,
+    'totalAmount': totalAmount,
+    'paymentMethod': paymentMethod, // Menyimpan metode pembayaran
+    'change': change,
+    'status_transaksi': 'selesai', // Menandakan bahwa transaksi telah selesai
+    'date': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+    'invoiceNumber': invoiceNumber, // Menyimpan nomor invoice
+  };
+
+  try {
+    // Simpan transaksi ke Firestore
+    await FirebaseFirestore.instance.collection('riwayattransaksi').add(transaction);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transaksi berhasil!')));
+
+    // Setelah transaksi berhasil disimpan, update nomor invoice di preferences
+    await _updateInvoiceNumberInPreferences(invoiceNumber);
+
+    // Pindah ke halaman cetak nota setelah transaksi selesai
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CetakNotaScreen(
+          orderMenu: widget.orderMenu, 
+          totalAmount: totalAmount,
+          change: change,
+          paymentMethod: paymentMethod,
+          customerName: customerNameController.text,
+          invoiceNumber: invoiceNumber, // Pastikan nomor nota yang terbaru dikirim
+          blockBackButton: true, 
+        ),
+      ),
+    );
+  } catch (e) {
+    print("Error saving transaction to Firestore: $e");
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan transaksi di Firestore!')));
+  }
+}
 
   // Fungsi untuk memperbarui nomor invoice di SharedPreferences
   Future<void> _updateInvoiceNumberInPreferences(String newInvoiceNumber) async {
@@ -170,8 +171,26 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  @override
+Widget build(BuildContext context) {
+  return WillPopScope(
+    onWillPop: () async {
+      // Tampilkan snackbar jika pengguna mencoba kembali setelah transaksi selesai
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Transaksi sudah selesai, tidak bisa kembali'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;  // Membatasi kembali
+    },
+    child: Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
@@ -552,6 +571,7 @@ class _PembayaranScreenState extends State<PembayaranScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

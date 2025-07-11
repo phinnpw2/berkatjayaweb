@@ -1,10 +1,10 @@
 name: berkatjaya_web
 description: "A new Flutter project."
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.2
+  sdk: '>=3.7.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -17,15 +17,19 @@ dependencies:
   intl: ^0.17.0
   path_provider: ^2.0.3
   shared_preferences: ^2.0.15
-  
-  # Tambahan untuk membuat dan mencetak PDF
-  pdf: ^3.10.1
+
+  # PDF & Printing Support (kompatibel)
+  pdf: ^3.8.4
   printing: ^5.11.0
+
+  # Thermal printing (aktifkan jika perlu)
+  # esc_pos_printer: ^4.0.2
+  # esc_pos_utils: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true
@@ -40,6 +44,7 @@ flutter:
     - assets/pengaturanlogo.png
     - assets/back2.jpg
     - assets/backgroundlogin.jpg
+
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
